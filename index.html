@@ -38,9 +38,10 @@
   .filters{margin-left:auto; display:flex; gap:12px; flex-wrap:wrap;}
   .filter-pill{
     background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35);
-    border-radius:12px; padding:7px 14px; min-width:175px; backdrop-filter:blur(4px);
+    border-radius:12px; padding:7px 14px; min-width:170px; backdrop-filter:blur(4px);
     display:flex; flex-direction:column; gap:1px;
   }
+  .filter-pill.disabled{opacity:.45;}
   .filter-pill .fl{font-size:10px; text-transform:uppercase; letter-spacing:.8px; opacity:.8;}
   .filter-pill select{
     background:transparent; border:none; color:#fff; font-size:14px; font-weight:700;
@@ -65,7 +66,7 @@
   .ic-purple{background:#e8e4f8; color:#5c4fa8;}
   .kpi-body{flex:1; min-width:0;}
   .kpi-label{font-size:12.5px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .kpi-value{font-size:28px; font-weight:800; line-height:1.15; margin:1px 0; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .kpi-value{font-size:27px; font-weight:800; line-height:1.15; margin:1px 0; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
   .kpi-value .unit{font-size:15px; font-weight:700; color:var(--muted);}
   .kpi-sub{font-size:11.5px; color:var(--muted);}
   .kpi .ring{width:62px; height:62px; flex-shrink:0;}
@@ -103,6 +104,7 @@
   #areaBarWrap{height:470px;}
   #donutWrap{height:215px;}
   #groupedWrap{height:330px;}
+  #trendWrap{height:330px;}
 
   /* ============ TABLES ============ */
   .tbl-scroll{overflow-x:auto;}
@@ -123,6 +125,18 @@
   .c-warn{background:var(--amber-l); color:var(--amber-d);}
   .c-bad{background:var(--red-l); color:var(--red-d);}
   .num{font-weight:600; color:#44607a;}
+  .muted-na{color:#a4b3c2; font-weight:700;}
+
+  /* TL overview */
+  .tl-scroll{max-height:480px; overflow-y:auto;}
+  .tl-scroll thead th{position:sticky; top:0; z-index:2; box-shadow:0 1px 0 var(--line);}
+  .rank{font-weight:800; color:var(--muted); width:36px;}
+  tr.row-best{background:#f1fbf6;}
+  tr.row-worst{background:#fdf5f4;}
+  .stat-strip{display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+  .stat-box{flex:1; min-width:190px; background:#f7fafc; border:1px solid var(--line); border-radius:12px; padding:10px 14px;}
+  .stat-box .lab{font-size:10.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); font-weight:700;}
+  .stat-box .val{font-size:15px; font-weight:800; color:#23485f; margin-top:3px;}
 
   /* donut side list */
   .issue-list{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
@@ -146,14 +160,13 @@
 </head>
 <body>
 <div class="dash">
-
   <!-- ================= HEADER ================= -->
   <header>
     <div class="brand">SKINTIFIC</div>
     <div class="head-divider"></div>
     <div class="title-block">
       <h1>Visibility Compliance Dashboard</h1>
-      <p>Planogram &middot; OSA &middot; POSM — Performance by Region with Month-over-Month Comparison</p>
+      <p>Planogram &middot; OSA &middot; POSM — TL Performance &amp; Monthly Trend</p>
     </div>
     <div class="filters">
       <div class="filter-pill">
@@ -168,20 +181,24 @@
         <span class="fl">👤 AOM</span>
         <select id="aomSel"><option value="ALL">All AOM</option></select>
       </div>
+      <div class="filter-pill" id="tlPill">
+        <span class="fl">🧑‍💼 TL (Team Leader)</span>
+        <select id="tlSel"><option value="ALL">All TL</option></select>
+      </div>
     </div>
   </header>
 
   <!-- ================= KPI ROW ================= -->
   <section class="kpi-row" id="kpiRow"></section>
 
-  <!-- ================= ROW: AREA BAR + DONUT ================= -->
+  <!-- ================= ROW: REGION BAR + DONUT ================= -->
   <section class="grid g-3">
     <div class="card">
       <div class="card-head">
         <div class="card-ic ic-blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
         </div>
-        <h2>Compliance by Region</h2>
+        <h2 id="barTitle">Compliance by Region</h2>
         <div class="right">
           <select id="metricSel" class="mini-select">
             <option value="overall">Overall Visibility</option>
@@ -206,6 +223,25 @@
     </div>
   </section>
 
+  <!-- ================= TREND ================= -->
+  <section class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+        </div>
+        <h2>Compliance Trend (Month over Month)</h2>
+        <div class="right legend-mini">
+          <span><i class="dot" style="background:#2f9e6b"></i> Overall</span>
+          <span><i class="dot" style="background:#4d86a8"></i> Planogram</span>
+          <span><i class="dot" style="background:#f0a13c"></i> OSA</span>
+          <span><i class="dot" style="background:#8b7fd4"></i> POSM</span>
+        </div>
+      </div>
+      <div class="chart-wrap" id="trendWrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </section>
+
   <!-- ================= SCORECARD ================= -->
   <section class="grid">
     <div class="card">
@@ -224,11 +260,36 @@
         <table>
           <thead>
             <tr>
-              <th class="l">Region</th><th class="l">AOM</th><th>Stores</th><th>Submission</th>
+              <th class="l" id="scoreFirstTh">Region</th><th class="l">AOM</th><th>Stores</th><th>Submission</th>
               <th>Planogram</th><th>OSA</th><th>POSM Take-Out</th><th>Overall</th><th id="deltaTh">Δ vs LM</th>
             </tr>
           </thead>
           <tbody id="scoreBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TL PERFORMANCE ================= -->
+  <section class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5.5a3.5 3.5 0 010 7M17.5 20a6.6 6.6 0 00-2-4.7"/></svg>
+        </div>
+        <h2>TL Performance Overview</h2>
+        <div class="right legend-mini" id="tlScopeNote"></div>
+      </div>
+      <div class="stat-strip" id="tlStats"></div>
+      <div class="tl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th class="l">TL</th><th class="l">Region</th><th class="l">AOM</th>
+              <th>Stores</th><th>Submission</th><th>Planogram</th><th>POSM Take-Out</th><th>Overall</th><th id="tlDeltaTh">Δ vs LM</th>
+            </tr>
+          </thead>
+          <tbody id="tlBody"></tbody>
         </table>
       </div>
     </div>
@@ -244,7 +305,7 @@
         <h2>Planogram vs OSA vs POSM by Region</h2>
         <div class="right legend-mini">
           <span><i class="dot" style="background:#3f8f6a"></i> Planogram</span>
-          <span><i class="dot" style="background:#e0a33c"></i> OSA</span>
+          <span id="legOSA"><i class="dot" style="background:#e0a33c"></i> OSA</span>
           <span><i class="dot" style="background:#5b8fd9"></i> POSM</span>
         </div>
       </div>
@@ -299,17 +360,23 @@
 
 <script>
 /* ================================================================
-   DATA — update tiap bulan: tambah blok baru di RAW dengan periode
-   baru (contoh "2026-11") beserta isi planogram / osa / posm.
-   Semua angka diambil langsung dari laporan Excel visibility.
+   DATA — update tiap bulan: tambah blok baru di RAW & TL_RAW.
+   RAW   = data per region (sheets Planogram/OSA/POSM regional)
+   TL_RAW = data per Team Leader (sheets Visibility per TL)
    ================================================================ */
 
-/* grouping otomatis: 1 tampilan per region asli dari Excel (bisa dikoreksi kapan saja) */
-
-/* row helpers: P=planogram, O=OSA, M=POSM */
+/* row helpers: P=planogram, O=OSA, M=POSM, T=TL row */
 const P = (region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad)=>({region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad});
 const O = (region,alloc,good,oos)=>({region,alloc,good,oos});
 const M = (region,alloc,sub,takeout)=>({region,alloc,sub,takeout});
+const T = (tl,region,aom,stores,sub,ok,bad,npd,variant,posmBad,noFoto,posmSub,takeout)=>
+  ({tl,region,aom,stores,sub,ok,bad,npd,variant,posmBad,noFoto,posmSub,takeout});
+
+/* No Foto/Foto Blur per region (dari sheet TL, di-rollup) */
+const NOFOTO = {
+  "2026-09":{"BALI NUSA TENGGARA":1, "SOUTHERN SULAWESI":1},
+  "2026-10":{"BALI NUSA TENGGARA":1},
+};
 
 const RAW = {
   "2026-09": {
@@ -417,55 +484,180 @@ const RAW = {
   /* >>> Tambah bulan berikutnya di sini (contoh "2026-11") <<< */
 };
 const PERIODS = Object.keys(RAW); /* urut sesuai penambahan: terakhir = bulan terbaru */
-
+/* ============ TL (TEAM LEADER) DATA ============
+   T(tl, region, aom, stores, sub, TRUE, FALSE, npdZone, variantByOrder, posmBad, noFoto, posmSub, takeout)
+   Tervalidasi = grand total laporan:
+   Sep 2026: 777 stores / 609 TRUE / 168 FALSE / npd 24 / var 9 / posm 133 / nofoto 2 / sub 733 / takeout 567
+   Oct 2026: 771 stores / 723 TRUE / 48 FALSE / npd 21 / var 2 / posm 24 / nofoto 1 / sub 724 / takeout 654
+   ================================================ */
+const TL_RAW = {
+  "2026-09": [
+    T("CATUR APRIYONO","BALI NUSA TENGGARA","CHRISTY ELIKA",20,20,20,0,0,0,0,0,20,20),
+    T("DIAN PUSPITA SARI","BALI NUSA TENGGARA","CHRISTY ELIKA",21,21,19,2,0,0,2,0,20,15),
+    T("NI KADEK RISA ARIANI DWIASRI","BALI NUSA TENGGARA","CHRISTY ELIKA",30,30,22,8,3,1,4,0,22,20),
+    T("visy rizky mayasari","BALI NUSA TENGGARA","CHRISTY ELIKA",21,21,11,10,0,0,10,0,21,10),
+    T("YOHANES IWANDI MAHI","BALI NUSA TENGGARA","CHRISTY ELIKA",11,11,3,8,1,0,6,1,11,2),
+    T("ANITA KURNIA WIDYASTUTI","CENTRAL JAVA","GUMILANG PRAKARSA",22,22,21,1,1,0,0,0,22,19),
+    T("ASNIDA FEBRIANI","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
+    T("Dewi nurhaniari","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
+    T("JEFMI HARIANDA","CENTRAL JAVA","GUMILANG PRAKARSA",15,15,15,0,0,0,0,0,15,11),
+    T("MUNJAI","CENTRAL JAVA","GUMILANG PRAKARSA",21,21,14,7,0,0,7,0,20,16),
+    T("RENA FEBRI GUNAWAN","CENTRAL SUMATERA 1","YOSEF KRISTIAN",21,21,3,18,0,1,17,0,21,16),
+    T("Siti Ayu Mardiah","CENTRAL SUMATERA 1","YOSEF KRISTIAN",10,10,10,0,0,0,0,0,6,6),
+    T("WAHYUNI WIJAYANTI","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",21,21,21,0,0,0,0,0,21,18),
+    T("Zahara","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",14,14,14,0,0,0,0,0,14,6),
+    T("Desnyta Dianasari","EAST JAVA","ALFI FAUZAN IRSYAD",16,16,10,6,0,1,5,0,16,11),
+    T("Febty Aryani Purwaningtiyas","EAST JAVA","ALFI FAUZAN IRSYAD",43,43,39,4,1,0,3,0,42,38),
+    T("Moch Ridwan","EAST JAVA","ALFI FAUZAN IRSYAD",20,20,20,0,0,0,0,0,19,20),
+    T("Pitip Patria Susanti","EAST JAVA","ALFI FAUZAN IRSYAD",24,24,24,0,0,0,0,0,23,14),
+    T("VAN DJOEDI","EAST JAVA","ALFI FAUZAN IRSYAD",18,18,17,1,1,0,0,0,17,12),
+    T("Anita Oktavia Renny","EAST KALIMANTAN","ANGGI FARISTIN JATRA",24,24,24,0,0,0,0,0,24,21),
+    T("Lilit Yustinia","EAST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,14,0,0,0,0,0,13,10),
+    T("JERLIN KOLEANGAN","NORTHERN SULAWESI","M NUR ALIM",19,19,13,6,0,1,5,0,19,10),
+    T("Nurfanti","NORTHERN SULAWESI","M NUR ALIM",16,16,16,0,0,0,0,0,16,3),
+    T("DEWI ISMAYANI","NORTHERN SUMATERA","YOSEF KRISTIAN",30,30,13,17,3,1,13,0,26,18),
+    T("FIKRI ANGGARA","NORTHERN SUMATERA","YOSEF KRISTIAN",11,11,7,4,1,0,3,0,10,10),
+    T("SAFRINA","NORTHERN SUMATERA","YOSEF KRISTIAN",10,10,10,0,0,0,0,0,8,8),
+    T("LISA NOVIANTY CHORY","PAPUA MALUKU","DWI HARSONO",21,21,10,11,1,0,10,0,20,16),
+    T("NUR INTAN ZAINAL","PAPUA MALUKU","DWI HARSONO",15,15,7,8,0,1,7,0,15,10),
+    T("FITRIA SAFITRY","SOUTH KALIMANTAN","USWATUN HASANAH",19,19,16,3,2,0,1,0,18,12),
+    T("MULIANA","SOUTH KALIMANTAN","USWATUN HASANAH",11,11,10,1,0,0,1,0,11,11),
+    T("GERALD LINTANG","SOUTHERN SULAWESI","M NUR ALIM",17,17,4,13,3,0,9,1,14,11),
+    T("Marlin","SOUTHERN SULAWESI","M NUR ALIM",15,15,15,0,0,0,0,0,14,15),
+    T("NIKEN GUNAWAN","SOUTHERN SULAWESI","M NUR ALIM",13,13,8,5,2,0,3,0,14,12),
+    T("Vena Bayu Febrianti","SOUTHERN SULAWESI","M NUR ALIM",8,8,8,0,0,0,0,0,7,7),
+    T("AZNI MAGHRIBA SAPUTRI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",7,7,7,0,0,0,0,0,7,7),
+    T("FITRIA SA'ADAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",15,15,12,3,1,0,2,0,14,13),
+    T("KHOIRUNNISA NURJANAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",12,12,7,5,1,1,3,0,12,8),
+    T("NURHAYATI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",9,9,6,3,0,0,3,0,7,6),
+    T("FUJI SEPTIANTI","WEST JAVA (SD)","HANA ELDERA (NOM)",20,20,20,0,0,0,0,0,14,14),
+    T("RIYANTI NURAHENY","WEST JAVA (SD)","HANA ELDERA (NOM)",16,16,16,0,0,0,0,0,16,12),
+    T("SEFUL ARIFIN","WEST JAVA (SD)","HANA ELDERA (NOM)",34,34,19,15,3,2,10,0,33,10),
+    T("Selfi Purwaningsih","WEST JAVA (SD)","HANA ELDERA (NOM)",18,18,18,0,0,0,0,0,16,18),
+    T("Dewi andayani","WEST KALIMANTAN","ANGGI FARISTIN JATRA",13,13,13,0,0,0,0,0,13,13),
+    T("Haja africana","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,5,9,0,0,9,0,14,10),
+  ],
+  "2026-10": [
+    T("CATUR APRIYONO","BALI NUSA TENGGARA","CHRISTY ELIKA",43,43,43,0,0,0,0,0,41,39),
+    T("NI KADEK RISA ARIANI DWIASRI","BALI NUSA TENGGARA","CHRISTY ELIKA",29,29,26,3,1,0,2,0,25,26),
+    T("visy rizky mayasari","BALI NUSA TENGGARA","CHRISTY ELIKA",22,22,19,3,1,0,2,0,22,16),
+    T("YOHANES IWANDI MAHI","BALI NUSA TENGGARA","CHRISTY ELIKA",10,10,8,2,1,0,0,1,9,3),
+    T("ANITA KURNIA WIDYASTUTI","CENTRAL JAVA","GUMILANG PRAKARSA",23,23,23,0,0,0,0,0,23,15),
+    T("ASNIDA FEBRIANI","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
+    T("Dewi nurhaniari","CENTRAL JAVA","GUMILANG PRAKARSA",16,16,16,0,0,0,0,0,13,16),
+    T("JEFMI HARIANDA","CENTRAL JAVA","GUMILANG PRAKARSA",16,16,16,0,0,0,0,0,16,11),
+    T("MUNJAI","CENTRAL JAVA","GUMILANG PRAKARSA",19,19,18,1,0,0,1,0,19,14),
+    T("RENA FEBRI GUNAWAN","CENTRAL SUMATERA 1","YOSEF KRISTIAN",21,21,17,4,1,0,3,0,21,16),
+    T("Siti Ayu Mardiah","CENTRAL SUMATERA 1","YOSEF KRISTIAN",10,10,9,1,1,0,0,0,6,10),
+    T("WAHYUNI WIJAYANTI","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",20,20,20,0,0,0,0,0,20,19),
+    T("Zahara","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",11,11,11,0,0,0,0,0,11,4),
+    T("Desnyta Dianasari","EAST JAVA","ALFI FAUZAN IRSYAD",17,17,17,0,0,0,0,0,17,14),
+    T("Febty Aryani Purwaningtiyas","EAST JAVA","ALFI FAUZAN IRSYAD",40,40,40,0,0,0,0,0,39,35),
+    T("Moch Ridwan","EAST JAVA","ALFI FAUZAN IRSYAD",21,21,21,0,0,0,0,0,20,21),
+    T("Pitip Patria Susanti","EAST JAVA","ALFI FAUZAN IRSYAD",24,24,24,0,0,0,0,0,24,16),
+    T("VAN DJOEDI","EAST JAVA","ALFI FAUZAN IRSYAD",18,18,18,0,0,0,0,0,18,19),
+    T("Anita Oktavia Renny","EAST KALIMANTAN","ANGGI FARISTIN JATRA",21,21,21,0,0,0,0,0,21,20),
+    T("Lilit Yustinia","EAST KALIMANTAN","ANGGI FARISTIN JATRA",16,16,16,0,0,0,0,0,14,13),
+    T("JERLIN KOLEANGAN","NORTHERN SULAWESI","M NUR ALIM",19,19,17,2,1,0,1,0,18,16),
+    T("Nurfanti","NORTHERN SULAWESI","M NUR ALIM",15,15,14,1,1,0,0,0,15,15),
+    T("DEWI ISMAYANI","NORTHERN SUMATERA","YOSEF KRISTIAN",23,23,22,1,0,0,1,0,18,16),
+    T("FIKRI ANGGARA","NORTHERN SUMATERA","YOSEF KRISTIAN",11,11,9,2,2,0,0,0,9,9),
+    T("SAFRINA","NORTHERN SUMATERA","YOSEF KRISTIAN",13,13,13,0,0,0,0,0,13,9),
+    T("LISA NOVIANTY CHORY","PAPUA MALUKU","DWI HARSONO",23,23,18,5,1,0,4,0,18,22),
+    T("NUR INTAN ZAINAL","PAPUA MALUKU","DWI HARSONO",15,15,15,0,0,0,0,0,14,14),
+    T("FITRIA SAFITRY","SOUTH KALIMANTAN","USWATUN HASANAH",18,18,16,2,1,0,1,0,17,13),
+    T("MULIANA","SOUTH KALIMANTAN","USWATUN HASANAH",13,13,13,0,0,0,0,0,13,12),
+    T("GERALD LINTANG","SOUTHERN SULAWESI","M NUR ALIM",12,12,10,2,0,0,2,0,11,11),
+    T("Marlin","SOUTHERN SULAWESI","M NUR ALIM",15,15,15,0,0,0,0,0,15,15),
+    T("NIKEN GUNAWAN","SOUTHERN SULAWESI","M NUR ALIM",15,15,13,2,1,0,1,0,15,13),
+    T("Vena Bayu Febrianti","SOUTHERN SULAWESI","M NUR ALIM",7,7,7,0,0,0,0,0,6,7),
+    T("AZNI MAGHRIBA SAPUTRI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",7,7,7,0,0,0,0,0,5,3),
+    T("FITRIA SA'ADAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",17,17,15,2,1,0,1,0,16,17),
+    T("KHOIRUNNISA NURJANAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",15,15,10,5,2,2,1,0,15,15),
+    T("NURHAYATI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",11,11,9,2,2,0,0,0,10,6),
+    T("FUJI SEPTIANTI","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",17,17,17,0,0,0,0,0,14,15),
+    T("RIYANTI NURAHENY","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",14,14,14,0,0,0,0,0,14,14),
+    T("SEFUL ARIFIN","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",34,34,32,2,2,0,0,0,29,29),
+    T("Selfi Purwaningsih","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",18,18,18,0,0,0,0,0,18,18),
+    T("Dewi andayani","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,14,0,0,0,0,0,14,11),
+    T("NOVITA DAMAYANTI","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,8,6,2,0,4,0,14,13),
+  ],
+  /* >>> Tambah TL bulan berikutnya di sini <<< */
+};
 /* ======================= HELPERS ======================= */
 const $ = id => document.getElementById(id);
-const pct = v => Math.round(v) + "%";
+const pct = v => (v===null || v===undefined) ? "—" : Math.round(v) + "%";
 const titleCase = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-const statusCls = v => (v=Math.round(v)) >= 85 ? "c-good" : v >= 70 ? "c-warn" : "c-bad";
+const statusCls = v => (v===null||v===undefined) ? "muted-na" : ((v=Math.round(v)) >= 85 ? "c-good" : v >= 70 ? "c-warn" : "c-bad");
 const statusColor = v => (v=Math.round(v)) >= 85 ? "#2f9e6b" : v >= 70 ? "#f0a13c" : "#e0574f";
+const normKey = s => s.toUpperCase().replace(/\s+/g," ").trim();
 
-/* build merged region rows for one period */
-function buildRows(key){
+/* region rows (dari RAW regional) */
+function buildRegionRows(key){
   const d = RAW[key];
   const osaMap = Object.fromEntries(d.osa.map(r=>[r.region,r]));
   const posmMap = Object.fromEntries(d.posm.map(r=>[r.region,r]));
+  const nfMap = NOFOTO[key] || {};
   return d.plano.map(p => {
     const o = osaMap[p.region], m = posmMap[p.region];
     return {
-      region:p.region, area:p.region, aom:p.aom,
-      p:{stores:p.stores, sub:p.sub, ok:p.ok, bad:p.bad, npdZone:p.npdZone, prodArr:p.prodArr, posmBad:p.posmBad},
+      region:p.region, aom:p.aom, tl:null,
+      p:{stores:p.stores, sub:p.sub, ok:p.ok, bad:p.bad, npdZone:p.npdZone,
+         prodArr:p.prodArr, posmBad:p.posmBad, noFoto:nfMap[p.region]||0},
       o:{stores:o.alloc, avail:o.good, oos:o.oos},
       m:{alloc:m.alloc, sub:m.sub, takeout:m.takeout},
     };
   });
 }
 
-/* aggregate a list of region rows -> totals + rates */
+/* TL rows (dari TL_RAW) — bentuk selaras dengan region rows */
+function buildTLRows(key){
+  return (TL_RAW[key]||[]).map(r => ({
+    tl:r.tl, region:r.region, aom:r.aom,
+    p:{stores:r.stores, sub:r.sub, ok:r.ok, bad:r.bad, npdZone:r.npd,
+       prodArr:r.variant, posmBad:r.posmBad, noFoto:r.noFoto},
+    o:{stores:0, avail:0, oos:0},   /* OSA tidak tersedia per TL */
+    m:{alloc:r.posmSub, sub:r.posmSub, takeout:r.takeout},
+  }));
+}
+
+/* baris untuk tampilan aktif: TL aktif = pakai baris TL, else baris region */
+function baseRows(key){
+  if(state.tl !== "ALL")
+    return buildTLRows(key).filter(r => normKey(r.tl) === state.tl);
+  return buildRegionRows(key);
+}
+
+/* aggregate */
 function aggregate(rows){
-  const a = {pStores:0,pSub:0,pOk:0,pBad:0,npdZone:0,prodArr:0,posmBad:0,
+  const a = {pStores:0,pSub:0,pOk:0,pBad:0,npdZone:0,prodArr:0,posmBad:0,noFoto:0,
              oStores:0,avail:0,oos:0, mAlloc:0,mSub:0,takeout:0};
   rows.forEach(r => {
     a.pStores+=r.p.stores; a.pSub+=r.p.sub; a.pOk+=r.p.ok; a.pBad+=r.p.bad;
-    a.npdZone+=r.p.npdZone; a.prodArr+=r.p.prodArr; a.posmBad+=r.p.posmBad;
+    a.npdZone+=r.p.npdZone; a.prodArr+=r.p.prodArr; a.posmBad+=r.p.posmBad; a.noFoto+=r.p.noFoto;
     a.oStores+=r.o.stores; a.avail+=r.o.avail; a.oos+=r.o.oos;
     a.mAlloc+=r.m.alloc; a.mSub+=r.m.sub; a.takeout+=r.m.takeout;
   });
-  a.pRate      = a.pStores ? a.pOk/a.pStores*100 : 0;
-  a.subRate    = a.pStores ? a.pSub/a.pStores*100 : 0;
-  a.badRate    = a.pStores ? a.pBad/a.pStores*100 : 0;
-  a.availRate  = a.oStores ? a.avail/a.oStores*100 : 0;
-  a.oosRate    = a.oStores ? a.oos/a.oStores*100 : 0;
-  a.posmComp   = a.mAlloc ? a.takeout/a.mAlloc*100 : 0;
-  a.posmSubRate= a.mAlloc ? a.mSub/a.mAlloc*100 : 0;
-  a.overall    = (a.pOk + a.avail + a.takeout) / (a.pStores + a.oStores + a.mAlloc) * 100;
+  a.hasOSA = a.oStores > 0;
+  a.pRate      = a.pStores ? a.pOk/a.pStores*100 : null;
+  a.subRate    = a.pStores ? a.pSub/a.pStores*100 : null;
+  a.badRate    = a.pStores ? a.pBad/a.pStores*100 : null;
+  a.availRate  = a.hasOSA ? a.avail/a.oStores*100 : null;
+  a.oosRate    = a.hasOSA ? a.oos/a.oStores*100 : null;
+  a.posmComp   = a.mAlloc ? a.takeout/a.mAlloc*100 : null;
+  a.overall    = a.hasOSA
+    ? (a.pOk + a.avail + a.takeout) / (a.pStores + a.oStores + a.mAlloc) * 100
+    : (a.pOk + a.takeout) / (a.pStores + a.mAlloc) * 100;
   return a;
 }
 
-/* region rows -> area rows (rollup) */
+/* region rows -> group rows (per region, atau per TL saat filter TL aktif) */
 function toAreaRows(rows){
   const groups = {};
-  rows.forEach(r => { (groups[r.area] = groups[r.area] || []).push(r); });
+  rows.forEach(r => {
+    const g = state.tl !== "ALL" ? (r.tl || r.region) : r.region;
+    (groups[g] = groups[g] || []).push(r);
+  });
   return Object.entries(groups).map(([area, rs]) => {
     const a = aggregate(rs);
     return {
@@ -477,20 +669,56 @@ function toAreaRows(rows){
 }
 
 /* ======================= STATE & FILTERS ======================= */
-const state = {period:PERIODS[PERIODS.length-1], region:"ALL", aom:"ALL", metric:"overall"};
+const state = {period:PERIODS[PERIODS.length-1], region:"ALL", aom:"ALL", tl:"ALL", metric:"overall"};
 
-PERIODS.slice().reverse().forEach(k =>
-  $("periodSel").insertAdjacentHTML("beforeend", `<option value="${k}">${RAW[k].label}</option>`));
-buildRows(state.period).map(r=>r.region).sort()
-  .forEach(rg => $("regionSel").insertAdjacentHTML("beforeend",
-    `<option value="${rg}">${titleCase(rg)}</option>`));
-[...new Set(buildRows(state.period).map(r=>r.aom))].sort()
-  .forEach(a => $("aomSel").insertAdjacentHTML("beforeend",
-    `<option value="${a}">${titleCase(a)}</option>`));
+function fillSelect(sel, opts, keep){
+  const cur = keep;
+  sel.innerHTML = opts.map(o=>`<option value="${o.v}">${o.t}</option>`).join("");
+  if(cur && [...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+function refreshPeriodOptions(){
+  fillSelect($("periodSel"), PERIODS.slice().reverse().map(k=>({v:k, t:RAW[k].label})), state.period);
+}
+function refreshRegionOptions(){
+  const regs = [...new Set(buildRegionRows(state.period).map(r=>r.region))].sort();
+  fillSelect($("regionSel"), [{v:"ALL",t:"All Regions"}].concat(regs.map(r=>({v:r,t:titleCase(r)}))), state.region);
+}
+function refreshAomOptions(){
+  const aoms = [...new Set(buildRegionRows(state.period).map(r=>r.aom))].sort();
+  fillSelect($("aomSel"), [{v:"ALL",t:"All AOM"}].concat(aoms.map(a=>({v:a,t:titleCase(a)}))), state.aom);
+  if(!$("aomSel").value){ state.aom="ALL"; } else { state.aom = $("aomSel").value; }
+}
+function refreshTlOptions(){
+  const tls = [...new Set(buildTLRows(state.period).map(r=>normKey(r.tl)))].sort();
+  if(state.tl!=="ALL" && !tls.includes(state.tl)) state.tl = "ALL";
+  fillSelect($("tlSel"), [{v:"ALL",t:"All TL"}].concat(tls.map(t=>({v:t,t:titleCase(t)}))), state.tl);
+}
+function applyTlPillState(){
+  const active = state.tl !== "ALL";
+  $("regionSel").disabled = active;
+  $("tlPill").classList.toggle("disabled", !active && false);
+  if(active){
+    const tlRow = buildTLRows(state.period).find(r=>normKey(r.tl)===state.tl);
+    if(tlRow){ state.region = tlRow.region; $("regionSel").value = tlRow.region; }
+    $("metricSel").querySelector('option[value="osa"]').disabled = true;
+    if(state.metric === "osa"){ state.metric = "overall"; $("metricSel").value = "overall"; }
+  } else {
+    $("metricSel").querySelector('option[value="osa"]').disabled = false;
+  }
+}
 
-$("periodSel").onchange = e => { state.period = e.target.value; render(); };
+$("periodSel").onchange = e => {
+  state.period = e.target.value;
+  refreshTlOptions(); refreshAomOptions(); refreshRegionOptions(); applyTlPillState();
+  render();
+};
 $("regionSel").onchange = e => { state.region = e.target.value; render(); };
-$("aomSel").onchange    = e => { state.aom = e.target.value; render(); };
+$("aomSel").onchange = e => { state.aom = e.target.value; render(); };
+$("tlSel").onchange = e => {
+  state.tl = e.target.value;
+  applyTlPillState(); refreshRegionOptions(); applyTlPillState();
+  render();
+};
 $("metricSel").onchange = e => { state.metric = e.target.value; renderCharts(); };
 
 function filterRows(rows){
@@ -498,11 +726,11 @@ function filterRows(rows){
     (state.region === "ALL" || r.region === state.region) &&
     (state.aom === "ALL" || r.aom === state.aom));
 }
+function visibleRows(periodKey){ return filterRows(baseRows(periodKey || state.period)); }
 function prevKey(){
   const i = PERIODS.indexOf(state.period);
   return i > 0 ? PERIODS[i-1] : null;
 }
-
 /* ======================= CHARTS ======================= */
 Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif";
 Chart.defaults.color = "#54708a";
@@ -513,8 +741,7 @@ const centerTextPlugin = {
     if(!opts || !opts.text) return;
     const {ctx, chartArea} = chart;
     const x = (chartArea.left + chartArea.right)/2, y = (chartArea.top + chartArea.bottom)/2;
-    ctx.save();
-    ctx.textAlign = "center";
+    ctx.save(); ctx.textAlign = "center";
     ctx.fillStyle = "#1f3a4d"; ctx.font = "800 26px sans-serif";
     ctx.fillText(opts.text, x, y + 2);
     ctx.fillStyle = "#6b8299"; ctx.font = "600 11px sans-serif";
@@ -522,26 +749,51 @@ const centerTextPlugin = {
     ctx.restore();
   }
 };
-Chart.register(centerTextPlugin);
+/* label nilai di atas titik line trend */
+const lineValuePlugin = {
+  id: "lineValue",
+  afterDatasetsDraw(chart){
+    const opts = chart.options.plugins.lineValue;
+    if(!opts || !opts.show) return;
+    const {ctx} = chart;
+    ctx.save();
+    ctx.font = "700 10px sans-serif"; ctx.textAlign = "center";
+    chart.data.datasets.forEach((ds, i) => {
+      if(ds._hide) return;
+      const meta = chart.getDatasetMeta(i);
+      ctx.fillStyle = ds.borderColor;
+      meta.data.forEach((pt, j) => {
+        const v = ds.data[j];
+        if(v === null || v === undefined) return;
+        ctx.fillText(Math.round(v) + "%", pt.x, pt.y - 9);
+      });
+    });
+    ctx.restore();
+  }
+};
+Chart.register(centerTextPlugin, lineValuePlugin);
 
-let areaBarChart, donutChart, groupedChart;
+let areaBarChart, donutChart, groupedChart, trendChart;
 const METRIC_LABEL = {overall:"Overall Visibility", plano:"Planogram Compliance", osa:"OSA Availability", posm:"POSM Take-Out"};
 const metricVal = (r, m) => m==="plano" ? r.rate.p : m==="osa" ? r.rate.o : m==="posm" ? r.rate.m : r.rate.overall;
 
 function renderCharts(){
-  const rows = filterRows(buildRows(state.period));
+  const rows = visibleRows();
   const areas = toAreaRows(rows);
+  const hasOSA = aggregate(rows).hasOSA;
 
-  /* --- Area bar --- */
-  const sorted = [...areas].sort((a,b) => metricVal(b,state.metric) - metricVal(a,state.metric));
-  const labels = sorted.map(r => titleCase(r.area));
-  const vals   = sorted.map(r => metricVal(r, state.metric));
+  /* --- Compliance bar --- */
+  $("barTitle").textContent = state.tl !== "ALL" ? "Compliance — " + titleCase(state.tl) : "Compliance by Region";
+  const sorted = [...areas].sort((a,b) => (metricVal(b,state.metric)??-1) - (metricVal(a,state.metric)??-1));
+  const labels = sorted.map(r => state.tl !== "ALL" ? titleCase(state.tl) : titleCase(r.area));
+  const vals   = sorted.map(r => metricVal(r, state.metric) ?? 0);
   const colors = vals.map(v => statusColor(v));
 
   if(areaBarChart){
     areaBarChart.data.labels = labels;
     areaBarChart.data.datasets[0].data = vals;
     areaBarChart.data.datasets[0].backgroundColor = colors;
+    areaBarChart.options.scales.x.max = Math.max(100, Math.ceil((Math.max(...vals, 100)+8)/10)*10);
     areaBarChart.update();
   } else {
     areaBarChart = new Chart($("areaBar"), {
@@ -554,7 +806,7 @@ function renderCharts(){
           tooltip:{callbacks:{label:c => " " + METRIC_LABEL[state.metric] + ": " + c.parsed.x + "%"}},
         },
         scales:{
-          x:{min:0,max:100,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
+          x:{min:0,max:Math.max(100, Math.ceil((Math.max(...vals, 100)+8)/10)*10),grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
           y:{grid:{display:false},ticks:{font:{size:12,weight:"700"}}}
         }
       }
@@ -564,10 +816,11 @@ function renderCharts(){
   /* --- Issue donut --- */
   const a = aggregate(rows);
   const issues = [
-    {nm:"Stores OOS",                vl:a.oos,       c:"#e0574f"},
+    ...(a.hasOSA ? [{nm:"Stores OOS", vl:a.oos, c:"#e0574f"}] : []),
     {nm:"Incorrect POSM",            vl:a.posmBad,   c:"#f0a13c"},
     {nm:"Incorrect NPD Zone",        vl:a.npdZone,   c:"#5b8fd9"},
-    {nm:"Incorrect Product Arrangement", vl:a.prodArr, c:"#8b7fd4"},
+    {nm:"Incorrect Variant / Product Arrangement", vl:a.prodArr, c:"#8b7fd4"},
+    {nm:"No Foto / Foto Blur",       vl:a.noFoto,    c:"#7f97ab"},
   ].filter(i => i.vl > 0);
   const totalIssues = issues.reduce((s,i)=>s+i.vl,0);
 
@@ -587,7 +840,7 @@ function renderCharts(){
         plugins:{
           legend:{display:false},
           centerText:{text:String(totalIssues), sub:"total issues"},
-          tooltip:{callbacks:{label:c => ` ${c.label}: ${c.raw} (${Math.round(c.raw/totalIssues*100)}%)`}}
+          tooltip:{callbacks:{label:c => ` ${c.label}: ${c.raw} (${totalIssues?Math.round(c.raw/totalIssues*100):0}%)`}}
         }
       }
     });
@@ -601,25 +854,28 @@ function renderCharts(){
     </div>`).join("");
 
   /* --- Grouped bar --- */
-  const ordered = areas; /* urut sesuai urutan data Excel */
+  $("legOSA").style.display = hasOSA ? "" : "none";
   const gd = [
-    {label:"Planogram", data:ordered.map(r=>r.rate.p), backgroundColor:"#3f8f6a"},
-    {label:"OSA",       data:ordered.map(r=>r.rate.o), backgroundColor:"#e0a33c"},
-    {label:"POSM",      data:ordered.map(r=>r.rate.m), backgroundColor:"#5b8fd9"},
-  ];
+    {label:"Planogram", data:areas.map(r=>r.rate.p), backgroundColor:"#3f8f6a", _hide:false},
+    {label:"OSA",       data:areas.map(r=>r.rate.o), backgroundColor:"#e0a33c", _hide:!hasOSA},
+    {label:"POSM",      data:areas.map(r=>r.rate.m), backgroundColor:"#5b8fd9", _hide:false},
+  ].filter(d=>!d._hide);
+  const gl = areas.map(r => state.tl!=="ALL" ? titleCase(state.tl) : titleCase(r.area));
+  const gMax = Math.max(100, Math.ceil((Math.max(...gd.flatMap(d=>d.data.filter(v=>v!==null&&v!==undefined)), 100)+8)/10)*10);
   if(groupedChart){
-    groupedChart.data.labels = ordered.map(r=>titleCase(r.area));
-    groupedChart.data.datasets.forEach((d,i)=>d.data = gd[i].data);
+    groupedChart.data.labels = gl;
+    groupedChart.data.datasets = gd;
+    groupedChart.options.scales.y.max = gMax;
     groupedChart.update();
   } else {
     groupedChart = new Chart($("groupedBar"), {
       type:"bar",
-      data:{labels:ordered.map(r=>titleCase(r.area)), datasets:gd},
+      data:{labels:gl, datasets:gd},
       options:{
         maintainAspectRatio:false,
         plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}},
         scales:{
-          y:{min:0,max:100,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
+          y:{min:0,max:gMax,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
           x:{grid:{display:false},ticks:{font:{size:10},maxRotation:55,minRotation:35}}
         }
       }
@@ -627,17 +883,68 @@ function renderCharts(){
   }
 }
 
+/* ======================= TREND ======================= */
+function renderTrend(){
+  const series = [
+    {key:"overall", label:"Overall",  color:"#2f9e6b"},
+    {key:"pRate",   label:"Planogram",color:"#4d86a8"},
+    {key:"availRate",label:"OSA",     color:"#f0a13c"},
+    {key:"posmComp",label:"POSM",     color:"#8b7fd4"},
+  ];
+  const perPeriod = PERIODS.map(k => aggregate(visibleRows(k)));
+  const anyOSA = perPeriod.some(a => a.hasOSA);
+  const labels = PERIODS.map(k => RAW[k].label);
+  const datasets = series
+    .filter(s => s.key !== "availRate" || anyOSA)
+    .map(s => ({
+      label:s.label,
+      data:perPeriod.map(a => (a[s.key]===null||a[s.key]===undefined) ? null : Math.round(a[s.key])),
+      borderColor:s.color, backgroundColor:s.color,
+      pointBackgroundColor:s.color, pointRadius:5, pointHoverRadius:7,
+      borderWidth:2.5, tension:.35, spanGaps:false,
+      _hide:false,
+    }));
+
+  const tMax = Math.max(100, Math.ceil((Math.max(...datasets.flatMap(d=>d.data.filter(v=>v!==null&&v!==undefined)), 100)+8)/10)*10);
+  if(trendChart){
+    trendChart.data.labels = labels;
+    trendChart.data.datasets = datasets;
+    trendChart.options.scales.y.max = tMax;
+    trendChart.update();
+  } else {
+    trendChart = new Chart($("trendChart"), {
+      type:"line",
+      data:{labels, datasets},
+      options:{
+        maintainAspectRatio:false,
+        interaction:{mode:"index", intersect:false},
+        plugins:{
+          legend:{display:false},
+          lineValue:{show:true},
+          tooltip:{callbacks:{label:c => ` ${c.dataset.label}: ${c.parsed.y}%`}}
+        },
+        scales:{
+          y:{min:0,max:tMax,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
+          x:{grid:{display:false},ticks:{font:{size:12,weight:"700"}}}
+        }
+      }
+    });
+  }
+}
 /* ======================= KPIs ======================= */
 function ringSvg(v, color){
+  const val = (v===null||v===undefined) ? 0 : Math.min(100, Math.max(0, v));
+  const txt = (v===null||v===undefined) ? "n/a" : Math.round(v)+"%";
   return `<svg class="ring" viewBox="0 0 36 36">
     <circle class="ring-bg" cx="18" cy="18" r="15.9"></circle>
-    <circle class="ring-fg" cx="18" cy="18" r="15.9" stroke="${color}"
-      stroke-dasharray="${Math.min(100,Math.max(0,v))} ${100-Math.min(100,Math.max(0,v))}" stroke-dashoffset="0"></circle>
-    <text class="ring-txt" x="18" y="19.6" text-anchor="middle">${Math.round(v)}%</text>
+    <circle class="ring-fg" cx="18" cy="18" r="15.9" stroke="${v===null?'#c9d5e0':color}"
+      stroke-dasharray="${val} ${100-val}" stroke-dashoffset="0"></circle>
+    <text class="ring-txt" x="18" y="19.6" text-anchor="middle">${txt}</text>
   </svg>`;
 }
 function deltaChip(now, prev, suffix){
-  if(prev === null || prev === undefined) return `<span class="delta flat">— no prior data</span>`;
+  if(now===null || now===undefined || prev===null || prev===undefined)
+    return `<span class="delta flat">—</span>`;
   const d = Math.round(now - prev);
   const cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
   const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "●";
@@ -645,11 +952,12 @@ function deltaChip(now, prev, suffix){
 }
 
 function renderKPIs(){
-  const rows = filterRows(buildRows(state.period));
+  const rows = visibleRows();
   const a = aggregate(rows);
   const pk = prevKey();
-  const pA = pk ? aggregate(filterRows(buildRows(pk))) : null;
+  const pA = pk ? aggregate(visibleRows(pk)) : null;
   const pLabel = pk ? RAW[pk].short : "";
+  const scopeNote = state.tl!=="ALL" ? "Plano + POSM (scope TL)" : "";
 
   const cards = [
     {ic:"ic-blue", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l1.5-5h15L21 9M3 9h18v11H3zM8 20v-6h8v6"/></svg>`,
@@ -658,8 +966,8 @@ function renderKPIs(){
       delta: pA ? `<span class="delta ${a.pSub>pA.pSub?'up':a.pSub<pA.pSub?'down':'flat'}">${a.pSub>pA.pSub?'▲':a.pSub<pA.pSub?'▼':'●'} ${a.pSub-pA.pSub>0?'+':''}${a.pSub-pA.pSub} stores <small>vs ${pLabel}</small></span>` : "",
       ring:a.subRate, color:"#2f9e6b"},
     {ic:"ic-green", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>`,
-      label:"Overall Visibility", value:pct(a.overall),
-      sub: pA ? `vs ${RAW[pk].label}: ${pct(pA.overall)}` : "Planogram · OSA · POSM combined",
+      label: a.hasOSA ? "Overall Visibility" : "Overall (Plano + POSM)", value:pct(a.overall),
+      sub: pA ? `vs ${RAW[pk].label}: ${pct(pA.overall)}` : (scopeNote || "Planogram · OSA · POSM combined"),
       delta: deltaChip(a.overall, pA ? pA.overall : null),
       ring:a.overall, color:statusColor(a.overall)},
     {ic:"ic-purple", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>`,
@@ -668,10 +976,11 @@ function renderKPIs(){
       delta: deltaChip(a.pRate, pA ? pA.pRate : null),
       ring:a.pRate, color:statusColor(a.pRate)},
     {ic:"ic-amber", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7h18l-1.5 13h-15z"/><path d="M8 7V5a4 4 0 018 0v2"/></svg>`,
-      label:"OSA (Availability)", value:pct(a.availRate),
-      sub: pA ? `vs ${RAW[pk].short}: ${pct(pA.availRate)} · ${a.oos} OOS` : `${a.oos} stores OOS (${Math.round(a.oosRate)}%)`,
-      delta: deltaChip(a.availRate, pA ? pA.availRate : null),
-      ring:a.availRate, color:statusColor(a.availRate)},
+      label:"OSA (Availability)", value: a.hasOSA ? pct(a.availRate) : "N/A",
+      sub: !a.hasOSA ? "data OSA hanya tersedia per region" :
+           pA ? `vs ${RAW[pk].short}: ${pct(pA.availRate)} · ${a.oos} OOS` : `${a.oos} stores OOS (${Math.round(a.oosRate)}%)`,
+      delta: a.hasOSA ? deltaChip(a.availRate, pA ? pA.availRate : null) : "",
+      ring:a.hasOSA ? a.availRate : null, color:"#f0a13c"},
     {ic:"ic-red", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 3H3v7h18zM21 14H3v7h18z"/><path d="M7 6.5h.01M7 17.5h.01"/></svg>`,
       label:"POSM Take-Out Compliance", value:pct(a.posmComp),
       sub: pA ? `vs ${RAW[pk].short}: ${pct(pA.posmComp)} · ${a.takeout} taken out` : `${a.takeout} of ${a.mAlloc} allocations`,
@@ -691,126 +1000,227 @@ function renderKPIs(){
 }
 
 /* ======================= TABLES ======================= */
-function renderTables(){
-  const rows = filterRows(buildRows(state.period));
+function renderScorecard(){
+  const rows = visibleRows();
   const areas = toAreaRows(rows);
   const pk = prevKey();
   const prevAreaMap = pk
-    ? Object.fromEntries(toAreaRows(filterRows(buildRows(pk))).map(x=>[x.area, x]))
+    ? Object.fromEntries(toAreaRows(visibleRows(pk)).map(x=>[x.area, x]))
     : {};
 
-  /* scorecard */
+  const tlMode = state.tl !== "ALL";
+  $("scoreFirstTh").textContent = tlMode ? "TL" : "Region";
   $("deltaTh").textContent = pk ? `Δ vs ${RAW[pk].short}` : "Δ vs LM";
+
   $("scoreBody").innerHTML = areas.map(x => {
     const a = x.a;
     const pa = prevAreaMap[x.area];
+    const nameCell = tlMode ? titleCase(x.rows[0].tl) : titleCase(x.area);
     return `
     <tr>
-      <td class="l">${titleCase(x.area)}</td>
-      <td class="l aom">${x.aoms.map(t=>t.replace(/\b\w/g,c=>c.toUpperCase())).join(" · ")}</td>
+      <td class="l">${nameCell}</td>
+      <td class="l aom">${x.aoms.map(t=>titleCase(t)).join(" · ")}</td>
       <td class="num">${a.pStores}</td>
       <td><span class="chip ${statusCls(a.subRate)}">${pct(a.subRate)}</span></td>
       <td><span class="chip ${statusCls(a.pRate)}">${pct(a.pRate)}</span></td>
-      <td><span class="chip ${statusCls(a.availRate)}">${pct(a.availRate)}</span></td>
+      <td>${a.hasOSA ? `<span class="chip ${statusCls(a.availRate)}">${pct(a.availRate)}</span>` : `<span class="muted-na">—</span>`}</td>
       <td><span class="chip ${statusCls(a.posmComp)}">${pct(a.posmComp)}</span></td>
       <td><span class="chip ${statusCls(a.overall)}">${pct(a.overall)}</span></td>
       <td>${pa ? deltaChip(a.overall, pa.a.overall) : `<span class="delta flat">—</span>`}</td>
     </tr>`;
   }).join("") + (() => {
     const a = aggregate(rows);
-    const pa = pk ? aggregate(filterRows(buildRows(pk))) : null;
+    const pa = pk ? aggregate(visibleRows(pk)) : null;
     return `<tr class="total-row">
       <td class="l">Grand Total</td><td class="l"></td>
       <td>${a.pStores}</td><td>${pct(a.subRate)}</td>
-      <td>${pct(a.pRate)}</td><td>${pct(a.availRate)}</td>
+      <td>${pct(a.pRate)}</td><td>${a.hasOSA?pct(a.availRate):"—"}</td>
       <td>${pct(a.posmComp)}</td><td>${pct(a.overall)}</td>
       <td>${pa ? deltaChip(a.overall, pa.overall) : "—"}</td>
     </tr>`;
   })();
+}
 
-  /* attention list: bottom 5 by overall */
+function renderAttention(){
+  const rows = visibleRows();
+  const areas = toAreaRows(rows);
   const mainIssue = x => {
     const cands = [
-      {nm:`OOS ${Math.round(x.a.oosRate)}%`, v:x.a.oosRate},
-      {nm:`Planogram FALSE ${Math.round(x.a.badRate)}%`, v:x.a.badRate},
-      {nm:`POSM take-out ${Math.round(x.a.posmComp)}%`, v:100 - x.a.posmComp},
+      ...(x.a.hasOSA ? [{nm:`OOS ${Math.round(x.a.oosRate)}%`, v:x.a.oosRate}] : []),
+      {nm:`Planogram FALSE ${Math.round(x.a.badRate||0)}%`, v:x.a.badRate||0},
+      {nm:`POSM take-out ${Math.round(x.a.posmComp||0)}%`, v:100 - (x.a.posmComp||0)},
     ].sort((a,b)=>b.v-a.v);
     return cands[0].nm;
   };
   const bottom = [...areas].sort((a,b)=>a.a.overall-b.a.overall).slice(0,5);
   $("attentionBody").innerHTML = bottom.map(x => `
     <tr>
-      <td class="l">${titleCase(x.area)}</td>
-      <td class="l aom">${x.aoms.map(t=>t.replace(/\b\w/g,c=>c.toUpperCase())).join(" · ")}</td>
+      <td class="l">${state.tl!=="ALL" ? titleCase(x.rows[0].tl) : titleCase(x.area)}</td>
+      <td class="l aom">${x.aoms.map(t=>titleCase(t)).join(" · ")}</td>
       <td class="l" style="font-weight:600; color:#b23a32;">${mainIssue(x)}</td>
-      <td><span class="chip ${statusCls(100-x.a.oosRate)}">${x.a.oos}</span></td>
-      <td><span class="chip ${statusCls(100-x.a.badRate)}">${x.a.pBad}</span></td>
+      <td>${x.a.hasOSA ? `<span class="chip ${statusCls(100-x.a.oosRate)}">${x.a.oos}</span>` : `<span class="muted-na">—</span>`}</td>
+      <td><span class="chip ${statusCls(100-(x.a.badRate||0))}">${x.a.pBad}</span></td>
       <td><span class="chip ${statusCls(x.a.overall)}">${pct(x.a.overall)}</span></td>
-    </tr>`).join("");
+    </tr>`).join("") || `<tr><td colspan="6" style="text-align:center; color:var(--muted);">No data</td></tr>`;
+}
+/* ======================= TL PERFORMANCE OVERVIEW ======================= */
+function tlMetrics(r){
+  const a = aggregate([r]);
+  return {
+    subRate: r.p.stores ? r.p.sub / r.p.stores * 100 : null,
+    pRate:   r.p.stores ? r.p.ok  / r.p.stores * 100 : null,
+    mRate:   r.m.alloc   ? r.m.takeout / r.m.alloc * 100 : null,
+    overall: (r.p.ok + r.m.takeout) / (r.p.stores + r.m.alloc) * 100,
+  };
+}
+function renderTLOverview(){
+  const pk = prevKey();
+  const prevMap = {};
+  if(pk){
+    buildTLRows(pk).filter(r =>
+        (state.region==="ALL" || r.region===state.region) &&
+        (state.aom==="ALL" || r.aom===state.aom))
+      .forEach(r => prevMap[normKey(r.tl)] = tlMetrics(r));
+  }
+  let tls = buildTLRows(state.period).filter(r =>
+    (state.tl==="ALL" || normKey(r.tl)===state.tl) &&
+    (state.region==="ALL" || r.region===state.region) &&
+    (state.aom==="ALL" || r.aom===state.aom));
+
+  const list = tls.map(r => {
+    const m = tlMetrics(r);
+    const pm = prevMap[normKey(r.tl)] || null;
+    return {r, m, pm};
+  }).sort((a,b) => b.m.overall - a.m.overall);
+
+  const n = list.length;
+  const best = list[0], bottom = list[n-1];
+  const avg = n ? list.reduce((s,x)=>s+x.m.overall,0)/n : 0;
+
+  $("tlScopeNote").innerHTML =
+    state.tl!=="ALL" ? "scope: 1 TL" : `period ${RAW[state.period].label}${state.region!=="ALL"?" · "+titleCase(state.region):""}`;
+
+  $("tlStats").innerHTML = n ? `
+    <div class="stat-box"><div class="lab">🏆 Best TL</div><div class="val" style="color:var(--green-d)">${titleCase(best.r.tl)} — ${pct(best.m.overall)}</div></div>
+    <div class="stat-box"><div class="lab">⚠️ Bottom TL</div><div class="val" style="color:var(--red-d)">${titleCase(bottom.r.tl)} — ${pct(bottom.m.overall)}</div></div>
+    <div class="stat-box"><div class="lab">Average Overall</div><div class="val">${pct(avg)} <span style="font-size:11px; color:var(--muted); font-weight:600">(${n} TL)</span></div></div>
+    <div class="stat-box"><div class="lab">Total Stores</div><div class="val">${list.reduce((s,x)=>s+x.r.p.stores,0)}</div></div>
+  ` : `<div class="stat-box"><div class="lab">No data</div><div class="val">—</div></div>`;
+
+  $("tlDeltaTh").textContent = pk ? `Δ vs ${RAW[pk].short}` : "Δ vs LM";
+
+  $("tlBody").innerHTML = list.map((x, i) => {
+    const medal = i===0 ? "🥇" : i===1 ? "🥈" : i===2 ? "🥉" : (i+1);
+    const rowCls = i===0 ? "row-best" : (i===n-1 ? "row-worst" : "");
+    const d = x.pm ? deltaChip(x.m.overall, x.pm.overall) : `<span class="delta flat">${pk?"new":"—"}</span>`;
+    return `
+    <tr class="${rowCls}">
+      <td class="rank">${medal}</td>
+      <td class="l">${titleCase(x.r.tl)}</td>
+      <td class="l" style="font-weight:600; color:#54708a;">${titleCase(x.r.region)}</td>
+      <td class="l aom">${titleCase(x.r.aom)}</td>
+      <td class="num">${x.r.p.stores}</td>
+      <td><span class="chip ${statusCls(x.m.subRate)}">${pct(x.m.subRate)}</span></td>
+      <td><span class="chip ${statusCls(x.m.pRate)}">${pct(x.m.pRate)}</span></td>
+      <td><span class="chip ${statusCls(x.m.mRate)}">${pct(x.m.mRate)}</span></td>
+      <td><span class="chip ${statusCls(x.m.overall)}">${pct(x.m.overall)}</span></td>
+      <td>${d}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="10" style="text-align:center; color:var(--muted);">No TL data for this filter</td></tr>`;
+
+  /* baris total TL */
+  if(n){
+    const tot = aggregate(tls);
+    const totOverall = (tot.pOk + tot.takeout) / (tot.pStores + tot.mAlloc) * 100;
+    $("tlBody").insertAdjacentHTML("beforeend", `
+      <tr class="total-row">
+        <td></td><td class="l">Grand Total</td><td class="l"></td><td class="l"></td>
+        <td>${tot.pStores}</td>
+        <td>${pct(tot.pStores?tot.pSub/tot.pStores*100:null)}</td>
+        <td>${pct(tot.pRate)}</td>
+        <td>${pct(tot.mAlloc?tot.takeout/tot.mAlloc*100:null)}</td>
+        <td>${pct(totOverall)}</td>
+        <td></td>
+      </tr>`);
+  }
 }
 
 /* ======================= INSIGHTS ======================= */
 function renderInsights(){
-  const rows = filterRows(buildRows(state.period));
-  const a = aggregate(rows);
+  const rows = visibleRows();
   const areas = toAreaRows(rows);
+  const a = aggregate(rows);
   const pk = prevKey();
-  const prevAreaMap = pk
-    ? Object.fromEntries(toAreaRows(filterRows(buildRows(pk))).map(x=>[x.area, x]))
-    : {};
+  const pA = pk ? aggregate(visibleRows(pk)) : null;
+  const worstP = [...areas].sort((x,y)=>(x.rate.p??101)-(y.rate.p??101))[0];
+  const worstO = a.hasOSA ? [...areas].sort((x,y)=>(x.rate.o??101)-(y.rate.o??101))[0] : null;
+  const worstM = [...areas].sort((x,y)=>(x.rate.m??101)-(y.rate.m??101))[0];
+  const nm = x => state.tl!=="ALL" ? titleCase(x.rows[0].tl) : titleCase(x.area);
+  const momTxt = pA
+    ? (a.overall > pA.overall + 0.5 ? "improved" : a.overall < pA.overall - 0.5 ? "declined" : "held steady")
+    : null;
 
-  const worstOsa   = [...areas].sort((x,y)=>y.a.oosRate - x.a.oosRate)[0];
-  const worstPlano = [...areas].sort((x,y)=>x.a.pRate - y.a.pRate)[0];
-  const worstPosm  = [...areas].sort((x,y)=>x.a.posmComp - y.a.posmComp)[0];
-  const lowAreas   = areas.filter(x => x.a.overall < 85);
+  $("insightTxt").innerHTML = `
+    Overall visibility ${momTxt
+      ? `<b>${momTxt}</b> from <b>${pct(pA.overall)}</b> in ${RAW[pk].label} to <b>${pct(a.overall)}</b> in ${RAW[state.period].label} <b>(${a.overall>pA.overall?"+":""}${Math.round(a.overall-pA.overall)}pp)</b>`
+      : `<b>${pct(a.overall)}</b> in ${RAW[state.period].label}`}
+    ${worstP && worstP.rate.p < 85 ? `— <b>${nm(worstP)}</b> has the weakest planogram compliance at <b>${pct(worstP.rate.p)}</b> (${worstP.a.pBad} FALSE shelves).` : ``}
+    ${worstO && worstO.rate.o < 85 ? `<b>${nm(worstO)}</b> also struggles with OSA at <b>${pct(worstO.rate.o)}</b> (${worstO.a.oos} stores OOS).` : ``}
+    ${worstM && worstM.rate.m < 85 ? `<b>${nm(worstM)}</b> has the lowest POSM take-out at <b>${pct(worstM.rate.m)}</b>.` : ``}
+    ${!a.hasOSA ? `<span style="color:var(--muted)"> (OSA tidak tersedia pada scope TL — metrik menggabungkan Planogram + POSM).</span>` : ``}
+  `;
 
-  const gapName = [
-    {nm:"OSA / stock availability", v:100-a.availRate},
-    {nm:"planogram compliance",     v:100-a.pRate},
-    {nm:"POSM take-out compliance", v:100-a.posmComp},
-  ].sort((x,y)=>y.v-x.v)[0].nm;
-
-  let momTxt = "";
-  if(pk){
-    const pa = aggregate(filterRows(buildRows(pk)));
-    const d = Math.round(a.overall - pa.overall);
-    const movers = areas.filter(x=>prevAreaMap[x.area]).map(x=>({
-      area:x.area, d:x.a.overall - prevAreaMap[x.area].a.overall}));
-    const up = [...movers].sort((x,y)=>y.d-x.d)[0];
-    const dn = [...movers].sort((x,y)=>x.d-y.d)[0];
-    momTxt = ` vs ${RAW[pk].label}, overall ${d>=0?"improved":"declined"} <b>${d>=0?"+":""}${d}pp</b> (${pct(pa.overall)} → ${pct(a.overall)}).`;
-    if(up) momTxt += ` Biggest gain: <b>${titleCase(up.area)}</b> (${up.d>=0?"+":""}${Math.round(up.d)}pp)` +
-      (dn && dn.d<0 ? `, while <b>${titleCase(dn.area)}</b> dropped ${Math.round(dn.d)}pp.` : ".");
-  }
-
-  $("insightTxt").innerHTML =
-    `Overall visibility is at <b>${pct(a.overall)}</b> (${a.pOk + a.avail + a.takeout} compliant store-checks out of ${a.pStores + a.oStores + a.mAlloc}).${momTxt} ` +
-    `The biggest gap is <b>${gapName}</b>. ` +
-    `<b>${titleCase(worstOsa.area)}</b> has the highest OOS (${Math.round(worstOsa.a.oosRate)}%), ` +
-    `while <b>${titleCase(worstPlano.area)}</b> has the lowest planogram compliance (${pct(worstPlano.a.pRate)}). ` +
-    `Incorrect POSM (${a.posmBad}) and incorrect NPD zone (${a.npdZone}) are the top planogram deviation reasons.`;
-
-  const belowText = lowAreas.length
-    ? `<li><b>${lowAreas.length} region${lowAreas.length>1?"s":""} below 85% overall</b> (${lowAreas.map(x=>titleCase(x.area)).join(", ")}) — prepare corrective action plan.</li>`
-    : `<li>All regions are above the 85% overall target — sustain performance and share best practices.</li>`;
-
-  $("actionList").innerHTML = `
-    <li>Priority stock replenishment & OOS follow-up in <b>${titleCase(worstOsa.area)}</b> (${worstOsa.a.oos} stores OOS; AOM: ${worstOsa.aoms.map(t=>titleCase(t)).join(", ")}).</li>
-    <li>Fix NPD zone & POSM placement in <b>${titleCase(worstPlano.area)}</b> — ${worstPlano.a.pBad} stores flagged FALSE planogram.</li>
-    <li>Chase old-POSM removal in <b>${titleCase(worstPosm.area)}</b> (${pct(worstPosm.a.posmComp)} take-out compliance).</li>
-    ${belowText}`;
+  /* Next action */
+  const actions = [];
+  if(worstO && worstO.rate.o < 85) actions.push(`Focus OSA coaching on <b>${nm(worstO)}</b> — ${worstO.a.oos} stores still OOS.`);
+  if(worstP && worstP.rate.p < 85) actions.push(`Run shelf re-setup & re-check for <b>${nm(worstP)}</b> (${worstP.a.pBad} FALSE shelves).`);
+  if(worstM && worstM.rate.m < 85) actions.push(`Push POSM take-out compliance in <b>${nm(worstM)}</b> (${pct(worstM.rate.m)} of allocations taken out).`);
+  const bottomTL = renderTLOverviewBottomTL();
+  if(bottomTL) actions.push(`Priority coaching call with bottom TL <b>${bottomTL.name}</b> (${bottomTL.pct}).`);
+  if(!actions.length) actions.push(`All visible areas ≥ 85% — maintain cadence and share best practices.`);
+  $("actionList").innerHTML = actions.map(t=>`<li>${t}</li>`).join("");
+}
+function renderTLOverviewBottomTL(){
+  let tls = buildTLRows(state.period).filter(r =>
+    (state.tl==="ALL" || normKey(r.tl)===state.tl) &&
+    (state.region==="ALL" || r.region===state.region) &&
+    (state.aom==="ALL" || r.aom===state.aom));
+  if(!tls.length) return null;
+  const worst = tls.map(r=>({name:titleCase(r.tl), v:tlMetrics(r).overall})).sort((a,b)=>a.v-b.v)[0];
+  return {name:worst.name, pct:pct(worst.v)};
 }
 
 /* ======================= RENDER ======================= */
 function render(){
-  const pk = prevKey();
+  renderKPIs();
+  renderCharts();
+  renderTrend();
+  renderScorecard();
+  renderTLOverview();
+  renderAttention();
+  renderInsights();
+  const a = aggregate(visibleRows());
   $("footNote").textContent =
-    `Data source: Skintific Visibility Planogram / OSA / POSM — ${RAW[state.period].label}` +
-    (pk ? `, compared with ${RAW[pk].label}` : "") +
-    ` · 14 original regions from the Excel report`;
-  renderKPIs(); renderCharts(); renderTables(); renderInsights();
+    `Data: ${RAW[state.period].label} · ${a.pStores} planogram stores · ${a.mAlloc} POSM allocations` +
+    (state.tl!=="ALL" ? ` · TL scope: ${titleCase(state.tl)}` : ``) +
+    ` — updated ${new Date().toLocaleDateString("en-GB", {day:"numeric", month:"short", year:"numeric"})}`;
 }
+
+/* ======================= INIT ======================= */
+refreshPeriodOptions();
+refreshRegionOptions();
+refreshAomOptions();
+refreshTlOptions();
+applyTlPillState();
+refreshRegionOptions(); /* re-sync dgn state.region dari applyTlPillState */
 render();
+
+
+
+
+
+
 </script>
 </body>
 </html>
+
