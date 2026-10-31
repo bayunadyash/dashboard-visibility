@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skintific — Visibility Compliance Dashboard</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="googlebot" content="noindex, nofollow">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --green:#2f9e6b; --green-l:#d9f0e4; --green-d:#1e7a4f;
+    --amber:#f0a13c; --amber-l:#fdeed6; --amber-d:#a86a12;
+    --red:#e0574f;  --red-l:#fadcd9;  --red-d:#b23a32;
+    --blue:#4d86a8; --blue-l:#dcebf4;
+    --purple:#8b7fd4;
+    --ink:#1f3a4d; --muted:#6b8299; --line:#e6edf3;
+    --bg:#eef3f8; --card:#ffffff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); padding:20px; min-height:100vh;
+  }
+  .dash{max-width:1560px; margin:0 auto;}
+
+  /* ============ HEADER ============ */
+  header{
+    background:linear-gradient(120deg,#35708f 0%,#4b8bad 60%,#5a97b8 100%);
+    border-radius:18px; padding:20px 28px; color:#fff;
+    display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+    box-shadow:0 6px 24px rgba(53,112,143,.25);
+  }
+  .brand{font-size:26px; font-weight:800; letter-spacing:3px; white-space:nowrap;}
+  .head-divider{width:1px; height:44px; background:rgba(255,255,255,.35);}
+  .title-block h1{font-size:24px; font-weight:700; line-height:1.15;}
+  .title-block p{font-size:12.5px; opacity:.85; margin-top:3px; letter-spacing:.3px;}
+  .filters{margin-left:auto; display:flex; gap:12px; flex-wrap:wrap;}
+  .filter-pill{
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35);
+    border-radius:12px; padding:7px 14px; min-width:175px; backdrop-filter:blur(4px);
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .filter-pill .fl{font-size:10px; text-transform:uppercase; letter-spacing:.8px; opacity:.8;}
+  .filter-pill select{
+    background:transparent; border:none; color:#fff; font-size:14px; font-weight:700;
+    outline:none; cursor:pointer; width:100%;
+    appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat; background-position:right center; padding-right:16px;
+  }
+  .filter-pill select option{color:#1f3a4d; background:#fff;}
+
+  /* ============ KPI ROW ============ */
+  .kpi-row{display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-top:18px;}
+  .kpi{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:16px 18px; display:flex; align-items:center; gap:14px;
+    box-shadow:0 2px 10px rgba(31,58,77,.06);
+  }
+  .kpi-icon{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .kpi-icon svg{width:23px; height:23px;}
+  .ic-blue{background:var(--blue-l); color:var(--blue);} .ic-green{background:var(--green-l); color:var(--green-d);}
+  .ic-red{background:var(--red-l); color:var(--red-d);} .ic-amber{background:var(--amber-l); color:var(--amber-d);}
+  .ic-purple{background:#e8e4f8; color:#5c4fa8;}
+  .kpi-body{flex:1; min-width:0;}
+  .kpi-label{font-size:12.5px; color:var(--muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .kpi-value{font-size:28px; font-weight:800; line-height:1.15; margin:1px 0; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .kpi-value .unit{font-size:15px; font-weight:700; color:var(--muted);}
+  .kpi-sub{font-size:11.5px; color:var(--muted);}
+  .kpi .ring{width:62px; height:62px; flex-shrink:0;}
+  .ring-bg{fill:none; stroke:#e9eff5; stroke-width:3.2;}
+  .ring-fg{fill:none; stroke-width:3.2; stroke-linecap:round; transform:rotate(-90deg); transform-origin:50% 50%; transition:stroke-dasharray .6s ease;}
+  .ring-txt{font-size:8.5px; font-weight:800; fill:var(--ink);}
+  .delta{font-size:11px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap;}
+  .delta.up{background:var(--green-l); color:var(--green-d);}
+  .delta.down{background:var(--red-l); color:var(--red-d);}
+  .delta.flat{background:#eef2f6; color:var(--muted);}
+  .delta small{font-weight:600; opacity:.8;}
+
+  /* ============ CARDS / GRIDS ============ */
+  .grid{display:grid; gap:16px; margin-top:16px;}
+  .g-3{grid-template-columns:1.75fr 1fr;}
+  .g-2{grid-template-columns:1.15fr 1fr;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:18px 20px; box-shadow:0 2px 10px rgba(31,58,77,.06);
+  }
+  .card-head{display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .card-ic{width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;}
+  .card-ic svg{width:17px; height:17px;}
+  .card-head h2{font-size:15.5px; font-weight:800; color:#23485f;}
+  .card-head .right{margin-left:auto; display:flex; align-items:center; gap:8px;}
+  .mini-select{
+    font-size:12px; font-weight:600; color:var(--ink); background:#f4f8fb;
+    border:1px solid var(--line); border-radius:8px; padding:5px 10px; outline:none; cursor:pointer;
+  }
+  .legend-mini{display:flex; gap:12px; font-size:11px; color:var(--muted); font-weight:600; flex-wrap:wrap;}
+  .legend-mini span{display:flex; align-items:center; gap:5px;}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+  .chart-wrap{position:relative; width:100%;}
+  #areaBarWrap{height:470px;}
+  #donutWrap{height:215px;}
+  #groupedWrap{height:330px;}
+
+  /* ============ TABLES ============ */
+  .tbl-scroll{overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  thead th{
+    background:#f4f8fb; color:#54708a; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px;
+    font-weight:700; padding:9px 10px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  thead th.l{text-align:left;}
+  tbody td{padding:8px 10px; text-align:center; border-bottom:1px solid #f0f4f8; white-space:nowrap;}
+  tbody td.l{text-align:left; font-weight:700; color:#2c4c63;}
+  tbody tr:hover{background:#f8fbfd;}
+  tbody tr.total-row{background:#fdf8ec; font-weight:800;}
+  tbody tr.total-row td{border-top:2px solid #f0dcae;}
+  .aom{font-weight:500 !important; color:var(--muted) !important; font-size:11.5px; white-space:normal !important; max-width:210px;}
+  .chip{display:inline-block; padding:2.5px 9px; border-radius:999px; font-size:11.5px; font-weight:800; min-width:46px;}
+  .c-good{background:var(--green-l); color:var(--green-d);}
+  .c-warn{background:var(--amber-l); color:var(--amber-d);}
+  .c-bad{background:var(--red-l); color:var(--red-d);}
+  .num{font-weight:600; color:#44607a;}
+
+  /* donut side list */
+  .issue-list{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
+  .issue-item{display:flex; align-items:center; gap:9px; font-size:12.5px;}
+  .issue-item .nm{flex:1; color:#3c5a72; font-weight:600;}
+  .issue-item .vl{font-weight:800;}
+  .issue-item .pc{color:var(--muted); font-size:11px; min-width:36px; text-align:right;}
+
+  /* ============ INSIGHT FOOTER ============ */
+  .insight{margin-top:16px; display:grid; grid-template-columns:1.25fr 1fr; gap:16px;}
+  .insight .card{display:flex; gap:12px; align-items:flex-start;}
+  .bullets{margin:6px 0 0 16px; font-size:12.5px; color:#3c5a72; line-height:1.7;}
+  .insight-txt{font-size:12.8px; color:#3c5a72; line-height:1.65;}
+  .insight-txt b{color:#23485f;}
+  .updated{margin:14px 4px 2px; font-size:11px; color:#8ba0b3; text-align:right;}
+  @media (max-width:1250px){
+    .kpi-row{grid-template-columns:repeat(3,1fr);}
+    .g-3,.g-2,.insight{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="brand">SKINTIFIC</div>
+    <div class="head-divider"></div>
+    <div class="title-block">
+      <h1>Visibility Compliance Dashboard</h1>
+      <p>Planogram &middot; OSA &middot; POSM — Performance by Region with Month-over-Month Comparison</p>
+    </div>
+    <div class="filters">
+      <div class="filter-pill">
+        <span class="fl">📅 Reporting Period</span>
+        <select id="periodSel"></select>
+      </div>
+      <div class="filter-pill">
+        <span class="fl">📍 Region</span>
+        <select id="regionSel"><option value="ALL">All Regions</option></select>
+      </div>
+      <div class="filter-pill">
+        <span class="fl">👤 AOM</span>
+        <select id="aomSel"><option value="ALL">All AOM</option></select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= KPI ROW ================= -->
+  <section class="kpi-row" id="kpiRow"></section>
+
+  <!-- ================= ROW: AREA BAR + DONUT ================= -->
+  <section class="grid g-3">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        </div>
+        <h2>Compliance by Region</h2>
+        <div class="right">
+          <select id="metricSel" class="mini-select">
+            <option value="overall">Overall Visibility</option>
+            <option value="plano">Planogram Compliance</option>
+            <option value="osa">OSA Availability</option>
+            <option value="posm">POSM Take-Out</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap" id="areaBarWrap"><canvas id="areaBar"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
+        </div>
+        <h2>Issue Breakdown</h2>
+      </div>
+      <div class="chart-wrap" id="donutWrap"><canvas id="issueDonut"></canvas></div>
+      <div class="issue-list" id="issueList"></div>
+    </div>
+  </section>
+
+  <!-- ================= SCORECARD ================= -->
+  <section class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 6-6"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+        </div>
+        <h2>Region Performance Scorecard</h2>
+        <div class="right legend-mini">
+          <span><i class="dot" style="background:var(--green)"></i> ≥ 85% (Good)</span>
+          <span><i class="dot" style="background:var(--amber)"></i> 70–84% (Medium)</span>
+          <span><i class="dot" style="background:var(--red)"></i> &lt; 70% (Low)</span>
+        </div>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="l">Region</th><th class="l">AOM</th><th>Stores</th><th>Submission</th>
+              <th>Planogram</th><th>OSA</th><th>POSM Take-Out</th><th>Overall</th><th id="deltaTh">Δ vs LM</th>
+            </tr>
+          </thead>
+          <tbody id="scoreBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GROUPED BAR + ATTENTION ================= -->
+  <section class="grid g-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
+        </div>
+        <h2>Planogram vs OSA vs POSM by Region</h2>
+        <div class="right legend-mini">
+          <span><i class="dot" style="background:#3f8f6a"></i> Planogram</span>
+          <span><i class="dot" style="background:#e0a33c"></i> OSA</span>
+          <span><i class="dot" style="background:#5b8fd9"></i> POSM</span>
+        </div>
+      </div>
+      <div class="chart-wrap" id="groupedWrap"><canvas id="groupedBar"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-ic ic-red">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        </div>
+        <h2>Regions Needing Attention</h2>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="l">Region</th><th class="l">AOM</th><th class="l">Main Issue</th>
+              <th>OOS</th><th>Planogram FALSE</th><th>Overall</th>
+            </tr>
+          </thead>
+          <tbody id="attentionBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSIGHTS ================= -->
+  <section class="insight">
+    <div class="card">
+      <div class="card-ic ic-amber" style="flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>
+      </div>
+      <div>
+        <h2 style="font-size:14.5px; font-weight:800; color:#23485f; margin-bottom:4px;">Key Insight</h2>
+        <div class="insight-txt" id="insightTxt"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-ic ic-blue" style="flex-shrink:0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <h2 style="font-size:14.5px; font-weight:800; color:#23485f;">Next Action</h2>
+        <ul class="bullets" id="actionList"></ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="updated" id="footNote"></div>
+</div>
+
+<script>
+/* ================================================================
+   DATA — update tiap bulan: tambah blok baru di RAW dengan periode
+   baru (contoh "2026-11") beserta isi planogram / osa / posm.
+   Semua angka diambil langsung dari laporan Excel visibility.
+   ================================================================ */
+
+/* grouping otomatis: 1 tampilan per region asli dari Excel (bisa dikoreksi kapan saja) */
+
+/* row helpers: P=planogram, O=OSA, M=POSM */
+const P = (region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad)=>({region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad});
+const O = (region,alloc,good,oos)=>({region,alloc,good,oos});
+const M = (region,alloc,sub,takeout)=>({region,alloc,sub,takeout});
+
+const RAW = {
+  "2026-09": {
+    label:"September 2026", short:"Sep",
+    plano:[
+      P("BALI NUSA TENGGARA","CHRISTY ELIKA",103,103,75,28,4,1,22),
+      P("CENTRAL JAVA","GUMILANG PRAKARSA",86,86,78,8,1,0,7),
+      P("CENTRAL SUMATERA 1","YOSEF KRISTIAN",31,31,13,18,0,1,17),
+      P("CENTRAL SUMATERA 2","BIMO ARYA PUTRA",35,35,35,0,0,0,0),
+      P("EAST JAVA","ALFI FAUZAN IRSYAD",121,121,110,11,2,1,8),
+      P("EAST KALIMANTAN","ANGGI FARISTIN JATRA",38,38,38,0,0,0,0),
+      P("NORTHERN SULAWESI","M NUR ALIM",29,29,25,4,0,1,3),
+      P("NORTHERN SUMATERA","YOSEF KRISTIAN",51,51,30,21,4,1,16),
+      P("PAPUA MALUKU","DWI HARSONO",42,42,21,21,1,1,19),
+      P("SOUTH KALIMANTAN","USWATUN HASANAH",30,30,26,4,2,0,2),
+      P("SOUTHERN SULAWESI","M NUR ALIM",53,53,35,18,5,0,12),
+      P("SOUTHERN SUMATERA","BIMO ARYA PUTRA",43,43,32,11,2,1,8),
+      P("WEST JAVA (SD)","HANA ELDERA (NOM)",88,88,73,15,3,2,10),
+      P("WEST KALIMANTAN","ANGGI FARISTIN JATRA",27,27,18,9,0,0,9),
+    ],
+    osa:[
+      O("BALI NUSA TENGGARA",103,71,32),
+      O("CENTRAL JAVA",86,79,7),
+      O("CENTRAL SUMATERA 1",31,9,22),
+      O("CENTRAL SUMATERA 2",35,22,13),
+      O("EAST JAVA",121,106,15),
+      O("EAST KALIMANTAN",38,29,9),
+      O("NORTHERN SULAWESI",29,17,12),
+      O("NORTHERN SUMATERA",51,37,14),
+      O("PAPUA MALUKU",42,8,34),
+      O("SOUTH KALIMANTAN",30,26,4),
+      O("SOUTHERN SULAWESI",53,27,26),
+      O("SOUTHERN SUMATERA",43,26,16),
+      O("WEST JAVA (SD)",88,17,70),
+      O("WEST KALIMANTAN",27,26,1),
+    ],
+    posm:[
+      M("BALI NUSA TENGGARA",101,94,67),
+      M("CENTRAL JAVA",85,85,73),
+      M("CENTRAL SUMATERA 1",31,27,22),
+      M("CENTRAL SUMATERA 2",35,35,24),
+      M("EAST JAVA",115,117,95),
+      M("EAST KALIMANTAN",38,37,31),
+      M("NORTHERN SULAWESI",28,29,10),
+      M("NORTHERN SUMATERA",47,44,36),
+      M("PAPUA MALUKU",42,41,30),
+      M("SOUTH KALIMANTAN",27,29,23),
+      M("SOUTHERN SULAWESI",50,49,45),
+      M("SOUTHERN SUMATERA",43,40,34),
+      M("WEST JAVA (SD)",86,79,54),
+      M("WEST KALIMANTAN",27,27,23),
+    ],
+  },
+  "2026-10": {
+    label:"October 2026", short:"Oct",
+    plano:[
+      P("BALI NUSA TENGGARA","CHRISTY ELIKA",104,104,96,8,3,0,4),
+      P("CENTRAL JAVA","GUMILANG PRAKARSA",88,88,87,1,0,0,1),
+      P("CENTRAL SUMATERA 1","YOSEF KRISTIAN",31,31,26,5,2,0,3),
+      P("CENTRAL SUMATERA 2","BIMO ARYA PUTRA",31,31,31,0,0,0,0),
+      P("EAST JAVA","ALFI FAUZAN IRSYAD",120,120,120,0,0,0,0),
+      P("EAST KALIMANTAN","ANGGI FARISTIN JATRA",37,37,37,0,0,0,0),
+      P("NORTHERN SULAWESI","M NUR ALIM",34,34,31,3,2,0,1),
+      P("NORTHERN SUMATERA","YOSEF KRISTIAN",47,47,44,3,2,0,1),
+      P("PAPUA MALUKU","DWI HARSONO",38,38,33,5,1,0,4),
+      P("SOUTH KALIMANTAN","USWATUN HASANAH",31,31,29,2,1,0,1),
+      P("SOUTHERN SULAWESI","M NUR ALIM",49,49,45,4,1,0,3),
+      P("SOUTHERN SUMATERA","BIMO ARYA PUTRA",50,50,41,9,5,2,2),
+      P("WEST JAVA (SD)","HANA ELDERA (NOM)",83,83,81,2,2,0,0),
+      P("WEST KALIMANTAN","ANGGI FARISTIN JATRA",28,28,22,6,2,0,4),
+    ],
+    osa:[
+      O("BALI NUSA TENGGARA",104,70,34),
+      O("CENTRAL JAVA",88,80,8),
+      O("CENTRAL SUMATERA 1",31,10,21),
+      O("CENTRAL SUMATERA 2",31,12,19),
+      O("EAST JAVA",120,110,10),
+      O("EAST KALIMANTAN",37,31,6),
+      O("NORTHERN SULAWESI",34,30,4),
+      O("NORTHERN SUMATERA",47,39,8),
+      O("PAPUA MALUKU",38,14,24),
+      O("SOUTH KALIMANTAN",31,30,1),
+      O("SOUTHERN SULAWESI",49,30,19),
+      O("SOUTHERN SUMATERA",50,27,23),
+      O("WEST JAVA (SD)",83,32,51),
+      O("WEST KALIMANTAN",28,28,0),
+    ],
+    posm:[
+      M("BALI NUSA TENGGARA",101,97,84),
+      M("CENTRAL JAVA",86,85,70),
+      M("CENTRAL SUMATERA 1",29,27,26),
+      M("CENTRAL SUMATERA 2",31,31,23),
+      M("EAST JAVA",111,118,105),
+      M("EAST KALIMANTAN",35,35,33),
+      M("NORTHERN SULAWESI",33,33,31),
+      M("NORTHERN SUMATERA",42,40,34),
+      M("PAPUA MALUKU",37,32,36),
+      M("SOUTH KALIMANTAN",25,30,25),
+      M("SOUTHERN SULAWESI",46,47,46),
+      M("SOUTHERN SUMATERA",44,46,41),
+      M("WEST JAVA (SD)",78,75,76),
+      M("WEST KALIMANTAN",28,28,24),
+    ],
+  },
+  /* >>> Tambah bulan berikutnya di sini (contoh "2026-11") <<< */
+};
+const PERIODS = Object.keys(RAW); /* urut sesuai penambahan: terakhir = bulan terbaru */
+
+/* ======================= HELPERS ======================= */
+const $ = id => document.getElementById(id);
+const pct = v => Math.round(v) + "%";
+const titleCase = s => s.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+const statusCls = v => (v=Math.round(v)) >= 85 ? "c-good" : v >= 70 ? "c-warn" : "c-bad";
+const statusColor = v => (v=Math.round(v)) >= 85 ? "#2f9e6b" : v >= 70 ? "#f0a13c" : "#e0574f";
+
+/* build merged region rows for one period */
+function buildRows(key){
+  const d = RAW[key];
+  const osaMap = Object.fromEntries(d.osa.map(r=>[r.region,r]));
+  const posmMap = Object.fromEntries(d.posm.map(r=>[r.region,r]));
+  return d.plano.map(p => {
+    const o = osaMap[p.region], m = posmMap[p.region];
+    return {
+      region:p.region, area:p.region, aom:p.aom,
+      p:{stores:p.stores, sub:p.sub, ok:p.ok, bad:p.bad, npdZone:p.npdZone, prodArr:p.prodArr, posmBad:p.posmBad},
+      o:{stores:o.alloc, avail:o.good, oos:o.oos},
+      m:{alloc:m.alloc, sub:m.sub, takeout:m.takeout},
+    };
+  });
+}
+
+/* aggregate a list of region rows -> totals + rates */
+function aggregate(rows){
+  const a = {pStores:0,pSub:0,pOk:0,pBad:0,npdZone:0,prodArr:0,posmBad:0,
+             oStores:0,avail:0,oos:0, mAlloc:0,mSub:0,takeout:0};
+  rows.forEach(r => {
+    a.pStores+=r.p.stores; a.pSub+=r.p.sub; a.pOk+=r.p.ok; a.pBad+=r.p.bad;
+    a.npdZone+=r.p.npdZone; a.prodArr+=r.p.prodArr; a.posmBad+=r.p.posmBad;
+    a.oStores+=r.o.stores; a.avail+=r.o.avail; a.oos+=r.o.oos;
+    a.mAlloc+=r.m.alloc; a.mSub+=r.m.sub; a.takeout+=r.m.takeout;
+  });
+  a.pRate      = a.pStores ? a.pOk/a.pStores*100 : 0;
+  a.subRate    = a.pStores ? a.pSub/a.pStores*100 : 0;
+  a.badRate    = a.pStores ? a.pBad/a.pStores*100 : 0;
+  a.availRate  = a.oStores ? a.avail/a.oStores*100 : 0;
+  a.oosRate    = a.oStores ? a.oos/a.oStores*100 : 0;
+  a.posmComp   = a.mAlloc ? a.takeout/a.mAlloc*100 : 0;
+  a.posmSubRate= a.mAlloc ? a.mSub/a.mAlloc*100 : 0;
+  a.overall    = (a.pOk + a.avail + a.takeout) / (a.pStores + a.oStores + a.mAlloc) * 100;
+  return a;
+}
+
+/* region rows -> area rows (rollup) */
+function toAreaRows(rows){
+  const groups = {};
+  rows.forEach(r => { (groups[r.area] = groups[r.area] || []).push(r); });
+  return Object.entries(groups).map(([area, rs]) => {
+    const a = aggregate(rs);
+    return {
+      area, rows:rs,
+      aoms:[...new Set(rs.map(r=>r.aom))],
+      a, rate:{p:a.pRate, o:a.availRate, m:a.posmComp, overall:a.overall},
+    };
+  });
+}
+
+/* ======================= STATE & FILTERS ======================= */
+const state = {period:PERIODS[PERIODS.length-1], region:"ALL", aom:"ALL", metric:"overall"};
+
+PERIODS.slice().reverse().forEach(k =>
+  $("periodSel").insertAdjacentHTML("beforeend", `<option value="${k}">${RAW[k].label}</option>`));
+buildRows(state.period).map(r=>r.region).sort()
+  .forEach(rg => $("regionSel").insertAdjacentHTML("beforeend",
+    `<option value="${rg}">${titleCase(rg)}</option>`));
+[...new Set(buildRows(state.period).map(r=>r.aom))].sort()
+  .forEach(a => $("aomSel").insertAdjacentHTML("beforeend",
+    `<option value="${a}">${titleCase(a)}</option>`));
+
+$("periodSel").onchange = e => { state.period = e.target.value; render(); };
+$("regionSel").onchange = e => { state.region = e.target.value; render(); };
+$("aomSel").onchange    = e => { state.aom = e.target.value; render(); };
+$("metricSel").onchange = e => { state.metric = e.target.value; renderCharts(); };
+
+function filterRows(rows){
+  return rows.filter(r =>
+    (state.region === "ALL" || r.region === state.region) &&
+    (state.aom === "ALL" || r.aom === state.aom));
+}
+function prevKey(){
+  const i = PERIODS.indexOf(state.period);
+  return i > 0 ? PERIODS[i-1] : null;
+}
+
+/* ======================= CHARTS ======================= */
+Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif";
+Chart.defaults.color = "#54708a";
+
+const centerTextPlugin = {
+  id: "centerText",
+  afterDraw(chart, args, opts){
+    if(!opts || !opts.text) return;
+    const {ctx, chartArea} = chart;
+    const x = (chartArea.left + chartArea.right)/2, y = (chartArea.top + chartArea.bottom)/2;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#1f3a4d"; ctx.font = "800 26px sans-serif";
+    ctx.fillText(opts.text, x, y + 2);
+    ctx.fillStyle = "#6b8299"; ctx.font = "600 11px sans-serif";
+    ctx.fillText(opts.sub || "", x, y + 19);
+    ctx.restore();
+  }
+};
+Chart.register(centerTextPlugin);
+
+let areaBarChart, donutChart, groupedChart;
+const METRIC_LABEL = {overall:"Overall Visibility", plano:"Planogram Compliance", osa:"OSA Availability", posm:"POSM Take-Out"};
+const metricVal = (r, m) => m==="plano" ? r.rate.p : m==="osa" ? r.rate.o : m==="posm" ? r.rate.m : r.rate.overall;
+
+function renderCharts(){
+  const rows = filterRows(buildRows(state.period));
+  const areas = toAreaRows(rows);
+
+  /* --- Area bar --- */
+  const sorted = [...areas].sort((a,b) => metricVal(b,state.metric) - metricVal(a,state.metric));
+  const labels = sorted.map(r => titleCase(r.area));
+  const vals   = sorted.map(r => metricVal(r, state.metric));
+  const colors = vals.map(v => statusColor(v));
+
+  if(areaBarChart){
+    areaBarChart.data.labels = labels;
+    areaBarChart.data.datasets[0].data = vals;
+    areaBarChart.data.datasets[0].backgroundColor = colors;
+    areaBarChart.update();
+  } else {
+    areaBarChart = new Chart($("areaBar"), {
+      type:"bar",
+      data:{labels, datasets:[{data:vals, backgroundColor:colors, borderRadius:5, barThickness:26}]},
+      options:{
+        indexAxis:"y", maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:c => " " + METRIC_LABEL[state.metric] + ": " + c.parsed.x + "%"}},
+        },
+        scales:{
+          x:{min:0,max:100,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
+          y:{grid:{display:false},ticks:{font:{size:12,weight:"700"}}}
+        }
+      }
+    });
+  }
+
+  /* --- Issue donut --- */
+  const a = aggregate(rows);
+  const issues = [
+    {nm:"Stores OOS",                vl:a.oos,       c:"#e0574f"},
+    {nm:"Incorrect POSM",            vl:a.posmBad,   c:"#f0a13c"},
+    {nm:"Incorrect NPD Zone",        vl:a.npdZone,   c:"#5b8fd9"},
+    {nm:"Incorrect Product Arrangement", vl:a.prodArr, c:"#8b7fd4"},
+  ].filter(i => i.vl > 0);
+  const totalIssues = issues.reduce((s,i)=>s+i.vl,0);
+
+  if(donutChart){
+    donutChart.data.labels = issues.map(i=>i.nm);
+    donutChart.data.datasets[0].data = issues.map(i=>i.vl);
+    donutChart.data.datasets[0].backgroundColor = issues.map(i=>i.c);
+    donutChart.options.plugins.centerText = {text:String(totalIssues), sub:"total issues"};
+    donutChart.update();
+  } else {
+    donutChart = new Chart($("issueDonut"), {
+      type:"doughnut",
+      data:{labels:issues.map(i=>i.nm),
+        datasets:[{data:issues.map(i=>i.vl), backgroundColor:issues.map(i=>i.c), borderWidth:2, borderColor:"#fff"}]},
+      options:{
+        maintainAspectRatio:false, cutout:"68%",
+        plugins:{
+          legend:{display:false},
+          centerText:{text:String(totalIssues), sub:"total issues"},
+          tooltip:{callbacks:{label:c => ` ${c.label}: ${c.raw} (${Math.round(c.raw/totalIssues*100)}%)`}}
+        }
+      }
+    });
+  }
+  $("issueList").innerHTML = issues.map(i => `
+    <div class="issue-item">
+      <i class="dot" style="background:${i.c}"></i>
+      <span class="nm">${i.nm}</span>
+      <span class="vl">${i.vl}</span>
+      <span class="pc">${totalIssues?Math.round(i.vl/totalIssues*100):0}%</span>
+    </div>`).join("");
+
+  /* --- Grouped bar --- */
+  const ordered = areas; /* urut sesuai urutan data Excel */
+  const gd = [
+    {label:"Planogram", data:ordered.map(r=>r.rate.p), backgroundColor:"#3f8f6a"},
+    {label:"OSA",       data:ordered.map(r=>r.rate.o), backgroundColor:"#e0a33c"},
+    {label:"POSM",      data:ordered.map(r=>r.rate.m), backgroundColor:"#5b8fd9"},
+  ];
+  if(groupedChart){
+    groupedChart.data.labels = ordered.map(r=>titleCase(r.area));
+    groupedChart.data.datasets.forEach((d,i)=>d.data = gd[i].data);
+    groupedChart.update();
+  } else {
+    groupedChart = new Chart($("groupedBar"), {
+      type:"bar",
+      data:{labels:ordered.map(r=>titleCase(r.area)), datasets:gd},
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}},
+        scales:{
+          y:{min:0,max:100,grid:{color:"#eef3f8"},ticks:{callback:v=>v+"%"}},
+          x:{grid:{display:false},ticks:{font:{size:10},maxRotation:55,minRotation:35}}
+        }
+      }
+    });
+  }
+}
+
+/* ======================= KPIs ======================= */
+function ringSvg(v, color){
+  return `<svg class="ring" viewBox="0 0 36 36">
+    <circle class="ring-bg" cx="18" cy="18" r="15.9"></circle>
+    <circle class="ring-fg" cx="18" cy="18" r="15.9" stroke="${color}"
+      stroke-dasharray="${Math.min(100,Math.max(0,v))} ${100-Math.min(100,Math.max(0,v))}" stroke-dashoffset="0"></circle>
+    <text class="ring-txt" x="18" y="19.6" text-anchor="middle">${Math.round(v)}%</text>
+  </svg>`;
+}
+function deltaChip(now, prev, suffix){
+  if(prev === null || prev === undefined) return `<span class="delta flat">— no prior data</span>`;
+  const d = Math.round(now - prev);
+  const cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
+  const arrow = d > 0 ? "▲" : d < 0 ? "▼" : "●";
+  return `<span class="delta ${cls}">${arrow} ${d>0?"+":""}${d}${suffix||"pp"}</span>`;
+}
+
+function renderKPIs(){
+  const rows = filterRows(buildRows(state.period));
+  const a = aggregate(rows);
+  const pk = prevKey();
+  const pA = pk ? aggregate(filterRows(buildRows(pk))) : null;
+  const pLabel = pk ? RAW[pk].short : "";
+
+  const cards = [
+    {ic:"ic-blue", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l1.5-5h15L21 9M3 9h18v11H3zM8 20v-6h8v6"/></svg>`,
+      label:"Stores Submitted", value:`${a.pSub} <span class="unit">/ ${a.pStores}</span>`,
+      sub:`${pct(a.subRate)} submission rate`,
+      delta: pA ? `<span class="delta ${a.pSub>pA.pSub?'up':a.pSub<pA.pSub?'down':'flat'}">${a.pSub>pA.pSub?'▲':a.pSub<pA.pSub?'▼':'●'} ${a.pSub-pA.pSub>0?'+':''}${a.pSub-pA.pSub} stores <small>vs ${pLabel}</small></span>` : "",
+      ring:a.subRate, color:"#2f9e6b"},
+    {ic:"ic-green", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>`,
+      label:"Overall Visibility", value:pct(a.overall),
+      sub: pA ? `vs ${RAW[pk].label}: ${pct(pA.overall)}` : "Planogram · OSA · POSM combined",
+      delta: deltaChip(a.overall, pA ? pA.overall : null),
+      ring:a.overall, color:statusColor(a.overall)},
+    {ic:"ic-purple", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6M7 16h8"/></svg>`,
+      label:"Planogram Compliance", value:pct(a.pRate),
+      sub: pA ? `vs ${RAW[pk].short}: ${pct(pA.pRate)} · ${a.pBad} FALSE` : `${a.pOk} compliant · ${a.pBad} FALSE`,
+      delta: deltaChip(a.pRate, pA ? pA.pRate : null),
+      ring:a.pRate, color:statusColor(a.pRate)},
+    {ic:"ic-amber", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7h18l-1.5 13h-15z"/><path d="M8 7V5a4 4 0 018 0v2"/></svg>`,
+      label:"OSA (Availability)", value:pct(a.availRate),
+      sub: pA ? `vs ${RAW[pk].short}: ${pct(pA.availRate)} · ${a.oos} OOS` : `${a.oos} stores OOS (${Math.round(a.oosRate)}%)`,
+      delta: deltaChip(a.availRate, pA ? pA.availRate : null),
+      ring:a.availRate, color:statusColor(a.availRate)},
+    {ic:"ic-red", svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 3H3v7h18zM21 14H3v7h18z"/><path d="M7 6.5h.01M7 17.5h.01"/></svg>`,
+      label:"POSM Take-Out Compliance", value:pct(a.posmComp),
+      sub: pA ? `vs ${RAW[pk].short}: ${pct(pA.posmComp)} · ${a.takeout} taken out` : `${a.takeout} of ${a.mAlloc} allocations`,
+      delta: deltaChip(a.posmComp, pA ? pA.posmComp : null),
+      ring:a.posmComp, color:statusColor(a.posmComp)},
+  ];
+  $("kpiRow").innerHTML = cards.map(c => `
+    <div class="kpi">
+      <div class="kpi-icon ${c.ic}">${c.svg}</div>
+      <div class="kpi-body">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value">${c.value} ${c.delta}</div>
+        <div class="kpi-sub">${c.sub}</div>
+      </div>
+      ${ringSvg(c.ring, c.color)}
+    </div>`).join("");
+}
+
+/* ======================= TABLES ======================= */
+function renderTables(){
+  const rows = filterRows(buildRows(state.period));
+  const areas = toAreaRows(rows);
+  const pk = prevKey();
+  const prevAreaMap = pk
+    ? Object.fromEntries(toAreaRows(filterRows(buildRows(pk))).map(x=>[x.area, x]))
+    : {};
+
+  /* scorecard */
+  $("deltaTh").textContent = pk ? `Δ vs ${RAW[pk].short}` : "Δ vs LM";
+  $("scoreBody").innerHTML = areas.map(x => {
+    const a = x.a;
+    const pa = prevAreaMap[x.area];
+    return `
+    <tr>
+      <td class="l">${titleCase(x.area)}</td>
+      <td class="l aom">${x.aoms.map(t=>t.replace(/\b\w/g,c=>c.toUpperCase())).join(" · ")}</td>
+      <td class="num">${a.pStores}</td>
+      <td><span class="chip ${statusCls(a.subRate)}">${pct(a.subRate)}</span></td>
+      <td><span class="chip ${statusCls(a.pRate)}">${pct(a.pRate)}</span></td>
+      <td><span class="chip ${statusCls(a.availRate)}">${pct(a.availRate)}</span></td>
+      <td><span class="chip ${statusCls(a.posmComp)}">${pct(a.posmComp)}</span></td>
+      <td><span class="chip ${statusCls(a.overall)}">${pct(a.overall)}</span></td>
+      <td>${pa ? deltaChip(a.overall, pa.a.overall) : `<span class="delta flat">—</span>`}</td>
+    </tr>`;
+  }).join("") + (() => {
+    const a = aggregate(rows);
+    const pa = pk ? aggregate(filterRows(buildRows(pk))) : null;
+    return `<tr class="total-row">
+      <td class="l">Grand Total</td><td class="l"></td>
+      <td>${a.pStores}</td><td>${pct(a.subRate)}</td>
+      <td>${pct(a.pRate)}</td><td>${pct(a.availRate)}</td>
+      <td>${pct(a.posmComp)}</td><td>${pct(a.overall)}</td>
+      <td>${pa ? deltaChip(a.overall, pa.overall) : "—"}</td>
+    </tr>`;
+  })();
+
+  /* attention list: bottom 5 by overall */
+  const mainIssue = x => {
+    const cands = [
+      {nm:`OOS ${Math.round(x.a.oosRate)}%`, v:x.a.oosRate},
+      {nm:`Planogram FALSE ${Math.round(x.a.badRate)}%`, v:x.a.badRate},
+      {nm:`POSM take-out ${Math.round(x.a.posmComp)}%`, v:100 - x.a.posmComp},
+    ].sort((a,b)=>b.v-a.v);
+    return cands[0].nm;
+  };
+  const bottom = [...areas].sort((a,b)=>a.a.overall-b.a.overall).slice(0,5);
+  $("attentionBody").innerHTML = bottom.map(x => `
+    <tr>
+      <td class="l">${titleCase(x.area)}</td>
+      <td class="l aom">${x.aoms.map(t=>t.replace(/\b\w/g,c=>c.toUpperCase())).join(" · ")}</td>
+      <td class="l" style="font-weight:600; color:#b23a32;">${mainIssue(x)}</td>
+      <td><span class="chip ${statusCls(100-x.a.oosRate)}">${x.a.oos}</span></td>
+      <td><span class="chip ${statusCls(100-x.a.badRate)}">${x.a.pBad}</span></td>
+      <td><span class="chip ${statusCls(x.a.overall)}">${pct(x.a.overall)}</span></td>
+    </tr>`).join("");
+}
+
+/* ======================= INSIGHTS ======================= */
+function renderInsights(){
+  const rows = filterRows(buildRows(state.period));
+  const a = aggregate(rows);
+  const areas = toAreaRows(rows);
+  const pk = prevKey();
+  const prevAreaMap = pk
+    ? Object.fromEntries(toAreaRows(filterRows(buildRows(pk))).map(x=>[x.area, x]))
+    : {};
+
+  const worstOsa   = [...areas].sort((x,y)=>y.a.oosRate - x.a.oosRate)[0];
+  const worstPlano = [...areas].sort((x,y)=>x.a.pRate - y.a.pRate)[0];
+  const worstPosm  = [...areas].sort((x,y)=>x.a.posmComp - y.a.posmComp)[0];
+  const lowAreas   = areas.filter(x => x.a.overall < 85);
+
+  const gapName = [
+    {nm:"OSA / stock availability", v:100-a.availRate},
+    {nm:"planogram compliance",     v:100-a.pRate},
+    {nm:"POSM take-out compliance", v:100-a.posmComp},
+  ].sort((x,y)=>y.v-x.v)[0].nm;
+
+  let momTxt = "";
+  if(pk){
+    const pa = aggregate(filterRows(buildRows(pk)));
+    const d = Math.round(a.overall - pa.overall);
+    const movers = areas.filter(x=>prevAreaMap[x.area]).map(x=>({
+      area:x.area, d:x.a.overall - prevAreaMap[x.area].a.overall}));
+    const up = [...movers].sort((x,y)=>y.d-x.d)[0];
+    const dn = [...movers].sort((x,y)=>x.d-y.d)[0];
+    momTxt = ` vs ${RAW[pk].label}, overall ${d>=0?"improved":"declined"} <b>${d>=0?"+":""}${d}pp</b> (${pct(pa.overall)} → ${pct(a.overall)}).`;
+    if(up) momTxt += ` Biggest gain: <b>${titleCase(up.area)}</b> (${up.d>=0?"+":""}${Math.round(up.d)}pp)` +
+      (dn && dn.d<0 ? `, while <b>${titleCase(dn.area)}</b> dropped ${Math.round(dn.d)}pp.` : ".");
+  }
+
+  $("insightTxt").innerHTML =
+    `Overall visibility is at <b>${pct(a.overall)}</b> (${a.pOk + a.avail + a.takeout} compliant store-checks out of ${a.pStores + a.oStores + a.mAlloc}).${momTxt} ` +
+    `The biggest gap is <b>${gapName}</b>. ` +
+    `<b>${titleCase(worstOsa.area)}</b> has the highest OOS (${Math.round(worstOsa.a.oosRate)}%), ` +
+    `while <b>${titleCase(worstPlano.area)}</b> has the lowest planogram compliance (${pct(worstPlano.a.pRate)}). ` +
+    `Incorrect POSM (${a.posmBad}) and incorrect NPD zone (${a.npdZone}) are the top planogram deviation reasons.`;
+
+  const belowText = lowAreas.length
+    ? `<li><b>${lowAreas.length} region${lowAreas.length>1?"s":""} below 85% overall</b> (${lowAreas.map(x=>titleCase(x.area)).join(", ")}) — prepare corrective action plan.</li>`
+    : `<li>All regions are above the 85% overall target — sustain performance and share best practices.</li>`;
+
+  $("actionList").innerHTML = `
+    <li>Priority stock replenishment & OOS follow-up in <b>${titleCase(worstOsa.area)}</b> (${worstOsa.a.oos} stores OOS; AOM: ${worstOsa.aoms.map(t=>titleCase(t)).join(", ")}).</li>
+    <li>Fix NPD zone & POSM placement in <b>${titleCase(worstPlano.area)}</b> — ${worstPlano.a.pBad} stores flagged FALSE planogram.</li>
+    <li>Chase old-POSM removal in <b>${titleCase(worstPosm.area)}</b> (${pct(worstPosm.a.posmComp)} take-out compliance).</li>
+    ${belowText}`;
+}
+
+/* ======================= RENDER ======================= */
+function render(){
+  const pk = prevKey();
+  $("footNote").textContent =
+    `Data source: Skintific Visibility Planogram / OSA / POSM — ${RAW[state.period].label}` +
+    (pk ? `, compared with ${RAW[pk].label}` : "") +
+    ` · 14 original regions from the Excel report`;
+  renderKPIs(); renderCharts(); renderTables(); renderInsights();
+}
+render();
+</script>
+</body>
+</html>
