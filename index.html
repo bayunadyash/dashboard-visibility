@@ -286,7 +286,7 @@
           <thead>
             <tr>
               <th>#</th><th class="l">TL</th><th class="l">Region</th><th class="l">AOM</th>
-              <th>Stores</th><th>Submission</th><th>Planogram</th><th>POSM Take-Out</th><th>Overall</th><th id="tlDeltaTh">Δ vs LM</th>
+              <th>Stores</th><th>Submission</th><th>Planogram</th><th>TRUE / FALSE</th><th id="tlDeltaTh">Δ vs LM</th>
             </tr>
           </thead>
           <tbody id="tlBody"></tbody>
@@ -1087,32 +1087,37 @@ function renderTLOverview(){
     (state.region==="ALL" || r.region===state.region) &&
     (state.aom==="ALL" || r.aom===state.aom));
 
+  /* ranking berdasarkan planogram compliance (TRUE rate) */
   const list = tls.map(r => {
     const m = tlMetrics(r);
     const pm = prevMap[normKey(r.tl)] || null;
     return {r, m, pm};
-  }).sort((a,b) => b.m.overall - a.m.overall);
+  }).sort((a,b) => (b.m.pRate??-1) - (a.m.pRate??-1));
 
   const n = list.length;
-  const best = list[0], bottom = list[n-1];
-  const avg = n ? list.reduce((s,x)=>s+x.m.overall,0)/n : 0;
+  const avgP = n ? list.reduce((s,x)=>s+(x.m.pRate||0),0)/n : 0;
+  const avgSub = n ? list.reduce((s,x)=>s+(x.m.subRate||0),0)/n : 0;
 
   $("tlScopeNote").innerHTML =
     state.tl!=="ALL" ? "scope: 1 TL" : `period ${RAW[state.period].label}${state.region!=="ALL"?" · "+titleCase(state.region):""}`;
 
+  const k3 = Math.min(3, n);
   $("tlStats").innerHTML = n ? `
-    <div class="stat-box"><div class="lab">🏆 Best TL</div><div class="val" style="color:var(--green-d)">${titleCase(best.r.tl)} — ${pct(best.m.overall)}</div></div>
-    <div class="stat-box"><div class="lab">⚠️ Bottom TL</div><div class="val" style="color:var(--red-d)">${titleCase(bottom.r.tl)} — ${pct(bottom.m.overall)}</div></div>
-    <div class="stat-box"><div class="lab">Average Overall</div><div class="val">${pct(avg)} <span style="font-size:11px; color:var(--muted); font-weight:600">(${n} TL)</span></div></div>
-    <div class="stat-box"><div class="lab">Total Stores</div><div class="val">${list.reduce((s,x)=>s+x.r.p.stores,0)}</div></div>
+    <div class="stat-box"><div class="lab">🏆 Top 3 TL</div><div class="val" style="font-size:12.5px; line-height:1.6; color:var(--green-d)">${
+      list.slice(0,k3).map((x,i)=>`${["🥇","🥈","🥉"][i]} ${titleCase(x.r.tl)} <b>${pct(x.m.pRate)}</b>`).join("<br>")
+    }</div></div>
+    <div class="stat-box"><div class="lab">⚠️ Bottom 3 TL</div><div class="val" style="font-size:12.5px; line-height:1.6; color:var(--red-d)">${
+      list.slice(-k3).reverse().map((x,i)=>`${titleCase(x.r.tl)} <b>${pct(x.m.pRate)}</b>`).join("<br>")
+    }</div></div>
+    <div class="stat-box"><div class="lab">Average</div><div class="val" style="font-size:13px">Submission ${pct(avgSub)} · Planogram ${pct(avgP)}<span style="font-size:11px; color:var(--muted); font-weight:600"> (${n} TL)</span></div></div>
   ` : `<div class="stat-box"><div class="lab">No data</div><div class="val">—</div></div>`;
 
-  $("tlDeltaTh").textContent = pk ? `Δ vs ${RAW[pk].short}` : "Δ vs LM";
+  $("tlDeltaTh").textContent = pk ? `Δ Planogram vs ${RAW[pk].short}` : "Δ vs LM";
 
   $("tlBody").innerHTML = list.map((x, i) => {
     const medal = i===0 ? "🥇" : i===1 ? "🥈" : i===2 ? "🥉" : (i+1);
-    const rowCls = i===0 ? "row-best" : (i===n-1 ? "row-worst" : "");
-    const d = x.pm ? deltaChip(x.m.overall, x.pm.overall) : `<span class="delta flat">${pk?"new":"—"}</span>`;
+    const rowCls = i<3 ? "row-best" : (i>=n-3 ? "row-worst" : "");
+    const d = x.pm ? deltaChip(x.m.pRate, x.pm.pRate) : `<span class="delta flat">${pk?"new":"—"}</span>`;
     return `
     <tr class="${rowCls}">
       <td class="rank">${medal}</td>
@@ -1122,24 +1127,21 @@ function renderTLOverview(){
       <td class="num">${x.r.p.stores}</td>
       <td><span class="chip ${statusCls(x.m.subRate)}">${pct(x.m.subRate)}</span></td>
       <td><span class="chip ${statusCls(x.m.pRate)}">${pct(x.m.pRate)}</span></td>
-      <td><span class="chip ${statusCls(x.m.mRate)}">${pct(x.m.mRate)}</span></td>
-      <td><span class="chip ${statusCls(x.m.overall)}">${pct(x.m.overall)}</span></td>
+      <td class="num" style="color:var(--muted); font-weight:600">${x.r.p.ok} / ${x.r.p.bad}</td>
       <td>${d}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="10" style="text-align:center; color:var(--muted);">No TL data for this filter</td></tr>`;
+  }).join("") || `<tr><td colspan="9" style="text-align:center; color:var(--muted);">No TL data for this filter</td></tr>`;
 
   /* baris total TL */
   if(n){
     const tot = aggregate(tls);
-    const totOverall = (tot.pOk + tot.takeout) / (tot.pStores + tot.mAlloc) * 100;
     $("tlBody").insertAdjacentHTML("beforeend", `
       <tr class="total-row">
         <td></td><td class="l">Grand Total</td><td class="l"></td><td class="l"></td>
         <td>${tot.pStores}</td>
         <td>${pct(tot.pStores?tot.pSub/tot.pStores*100:null)}</td>
         <td>${pct(tot.pRate)}</td>
-        <td>${pct(tot.mAlloc?tot.takeout/tot.mAlloc*100:null)}</td>
-        <td>${pct(totOverall)}</td>
+        <td>${tot.pOk} / ${tot.pBad}</td>
         <td></td>
       </tr>`);
   }
@@ -1176,7 +1178,7 @@ function renderInsights(){
   if(worstP && worstP.rate.p < 85) actions.push(`Run shelf re-setup & re-check for <b>${nm(worstP)}</b> (${worstP.a.pBad} FALSE shelves).`);
   if(worstM && worstM.rate.m < 85) actions.push(`Push POSM take-out compliance in <b>${nm(worstM)}</b> (${pct(worstM.rate.m)} of allocations taken out).`);
   const bottomTL = renderTLOverviewBottomTL();
-  if(bottomTL) actions.push(`Priority coaching call with bottom TL <b>${bottomTL.name}</b> (${bottomTL.pct}).`);
+  if(bottomTL) actions.push(`Priority coaching call with bottom TL <b>${bottomTL.name}</b> — planogram compliance only ${bottomTL.pct}.`);
   if(!actions.length) actions.push(`All visible areas ≥ 85% — maintain cadence and share best practices.`);
   $("actionList").innerHTML = actions.map(t=>`<li>${t}</li>`).join("");
 }
@@ -1186,7 +1188,7 @@ function renderTLOverviewBottomTL(){
     (state.region==="ALL" || r.region===state.region) &&
     (state.aom==="ALL" || r.aom===state.aom));
   if(!tls.length) return null;
-  const worst = tls.map(r=>({name:titleCase(r.tl), v:tlMetrics(r).overall})).sort((a,b)=>a.v-b.v)[0];
+  const worst = tls.map(r=>({name:titleCase(r.tl), v:tlMetrics(r).pRate})).sort((a,b)=>a.v-b.v)[0];
   return {name:worst.name, pct:pct(worst.v)};
 }
 
