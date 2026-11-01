@@ -151,6 +151,26 @@
   .bullets{margin:6px 0 0 16px; font-size:12.5px; color:#3c5a72; line-height:1.7;}
   .insight-txt{font-size:12.8px; color:#3c5a72; line-height:1.65;}
   .insight-txt b{color:#23485f;}
+
+  /* ============ EXPORT BUTTONS ============ */
+  .sec-head{display:flex; align-items:center; justify-content:space-between; margin:18px 2px 10px;}
+  .sec-head h2{font-size:15.5px; font-weight:800; color:#23485f;}
+  .exp-btn{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:700; color:#54708a;
+    background:#fff; border:1px solid var(--line); border-radius:8px;
+    padding:5px 11px; cursor:pointer; white-space:nowrap;
+    transition:all .15s ease; font-family:inherit;
+  }
+  .exp-btn:hover{background:var(--green-l); color:var(--green-d); border-color:#bde5d0;}
+  .exp-btn.done{background:var(--green); color:#fff; border-color:var(--green);}
+  #toast{
+    position:fixed; bottom:22px; right:22px; background:#1f3a4d; color:#fff;
+    padding:11px 18px; border-radius:12px; font-size:13px; font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.25); opacity:0; transform:translateY(10px);
+    transition:all .25s ease; pointer-events:none; z-index:99;
+  }
+  #toast.show{opacity:1; transform:translateY(0);}
   .updated{margin:14px 4px 2px; font-size:11px; color:#8ba0b3; text-align:right;}
   @media (max-width:1250px){
     .kpi-row{grid-template-columns:repeat(3,1fr);}
@@ -189,11 +209,15 @@
   </header>
 
   <!-- ================= KPI ROW ================= -->
+  <div class="sec-head">
+    <h2>Overview — KPI Bulan Ini</h2>
+    <button class="exp-btn" data-target="kpiRow">📋 Copy sebagai gambar</button>
+  </div>
   <section class="kpi-row" id="kpiRow"></section>
 
   <!-- ================= ROW: REGION BAR + DONUT ================= -->
   <section class="grid g-3">
-    <div class="card">
+    <div class="card" id="cardBar">
       <div class="card-head">
         <div class="card-ic ic-blue">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
@@ -206,17 +230,21 @@
             <option value="osa">OSA Availability</option>
             <option value="posm">POSM Take-Out</option>
           </select>
+          <button class="exp-btn" data-target="cardBar">📋 Copy</button>
         </div>
       </div>
       <div class="chart-wrap" id="areaBarWrap"><canvas id="areaBar"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardDonut">
       <div class="card-head">
         <div class="card-ic ic-amber">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6l4 2"/></svg>
         </div>
         <h2>Issue Breakdown</h2>
+        <div class="right">
+          <button class="exp-btn" data-target="cardDonut">📋 Copy</button>
+        </div>
       </div>
       <div class="chart-wrap" id="donutWrap"><canvas id="issueDonut"></canvas></div>
       <div class="issue-list" id="issueList"></div>
@@ -225,7 +253,7 @@
 
   <!-- ================= TREND ================= -->
   <section class="grid">
-    <div class="card">
+    <div class="card" id="cardTrend">
       <div class="card-head">
         <div class="card-ic ic-green">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
@@ -236,6 +264,7 @@
           <span><i class="dot" style="background:#4d86a8"></i> Planogram</span>
           <span><i class="dot" style="background:#f0a13c"></i> OSA</span>
           <span><i class="dot" style="background:#8b7fd4"></i> POSM</span>
+          <button class="exp-btn" data-target="cardTrend">📋 Copy</button>
         </div>
       </div>
       <div class="chart-wrap" id="trendWrap"><canvas id="trendChart"></canvas></div>
@@ -244,7 +273,7 @@
 
   <!-- ================= SCORECARD ================= -->
   <section class="grid">
-    <div class="card">
+    <div class="card" id="cardScore">
       <div class="card-head">
         <div class="card-ic ic-green">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3 6-6"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
@@ -254,6 +283,7 @@
           <span><i class="dot" style="background:var(--green)"></i> ≥ 85% (Good)</span>
           <span><i class="dot" style="background:var(--amber)"></i> 70–84% (Medium)</span>
           <span><i class="dot" style="background:var(--red)"></i> &lt; 70% (Low)</span>
+          <button class="exp-btn" data-target="cardScore">📋 Copy</button>
         </div>
       </div>
       <div class="tbl-scroll">
@@ -272,13 +302,16 @@
 
   <!-- ================= TL PERFORMANCE ================= -->
   <section class="grid">
-    <div class="card">
+    <div class="card" id="cardTL">
       <div class="card-head">
         <div class="card-ic ic-purple">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5.5a3.5 3.5 0 010 7M17.5 20a6.6 6.6 0 00-2-4.7"/></svg>
         </div>
         <h2>TL Performance Overview</h2>
-        <div class="right legend-mini" id="tlScopeNote"></div>
+        <div class="right legend-mini">
+          <span id="tlScopeNote"></span>
+          <button class="exp-btn" data-target="cardTL">📋 Copy</button>
+        </div>
       </div>
       <div class="stat-strip" id="tlStats"></div>
       <div class="tl-scroll">
@@ -297,7 +330,7 @@
 
   <!-- ================= GROUPED BAR + ATTENTION ================= -->
   <section class="grid g-2">
-    <div class="card">
+    <div class="card" id="cardGroup">
       <div class="card-head">
         <div class="card-ic ic-purple">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>
@@ -307,17 +340,21 @@
           <span><i class="dot" style="background:#3f8f6a"></i> Planogram</span>
           <span id="legOSA"><i class="dot" style="background:#e0a33c"></i> OSA</span>
           <span><i class="dot" style="background:#5b8fd9"></i> POSM</span>
+          <button class="exp-btn" data-target="cardGroup">📋 Copy</button>
         </div>
       </div>
       <div class="chart-wrap" id="groupedWrap"><canvas id="groupedBar"></canvas></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="cardAttn">
       <div class="card-head">
         <div class="card-ic ic-red">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
         </div>
         <h2>Regions Needing Attention</h2>
+        <div class="right">
+          <button class="exp-btn" data-target="cardAttn">📋 Copy</button>
+        </div>
       </div>
       <div class="tbl-scroll">
         <table>
@@ -334,7 +371,11 @@
   </section>
 
   <!-- ================= INSIGHTS ================= -->
-  <section class="insight">
+  <div class="sec-head">
+    <h2>Ringkasan</h2>
+    <button class="exp-btn" data-target="insightRow">📋 Copy Key Insight &amp; Next Action</button>
+  </div>
+  <section class="insight" id="insightRow">
     <div class="card">
       <div class="card-ic ic-amber" style="flex-shrink:0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>
@@ -357,6 +398,7 @@
 
   <div class="updated" id="footNote"></div>
 </div>
+<div id="toast"></div>
 
 <script>
 /* ================================================================
@@ -1191,6 +1233,106 @@ function renderTLOverviewBottomTL(){
   const worst = tls.map(r=>({name:titleCase(r.tl), v:tlMetrics(r).pRate})).sort((a,b)=>a.v-b.v)[0];
   return {name:worst.name, pct:pct(worst.v)};
 }
+
+/* ======================= EXPORT (Copy section as PNG) ======================= */
+function toast(msg, ms){
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>t.classList.remove("show"), ms || 2800);
+}
+/* inline semua computed style ke clone agar bisa dirender via SVG foreignObject */
+function inlineStyles(src, dst){
+  const cs = getComputedStyle(src);
+  let s = "";
+  for(let i = 0; i < cs.length; i++){
+    const p = cs[i];
+    s += p + ":" + cs.getPropertyValue(p) + ";";
+  }
+  dst.style.cssText = s;
+  const sc = src.children, dc = dst.children;
+  for(let i = 0; i < sc.length; i++) if(dc[i]) inlineStyles(sc[i], dc[i]);
+}
+async function copyCanvas(c, btn){
+  const blob = await new Promise(r => c.toBlob(r, "image/png"));
+  const origHtml = btn ? btn.innerHTML : null;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]);
+    toast("✅ Tersalin! Buka PowerPoint → Ctrl/Cmd+V untuk paste");
+    if(btn){ btn.classList.add("done"); btn.innerHTML = "✅ Tersalin";
+      setTimeout(()=>{ btn.classList.remove("done"); btn.innerHTML = origHtml; }, 2400); }
+  }catch(e){
+    console.log("clipboard error:", e.name, e.message);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "dashboard-section.png";
+    a.click();
+    if(e && (e.name === "NotAllowedError" || e.name === "SecurityError"))
+      toast("⚠️ Clipboard butuh window aktif — klik halaman dulu lalu ulangi. PNG juga sudah di-download.", 4500);
+    else
+      toast("⚠️ Clipboard tidak tersedia — gambar PNG di-download", 4000);
+  }
+}
+async function exportSection(el, btn){
+  try{
+    toast("Menyiapkan gambar…", 1500);
+    const rect = el.getBoundingClientRect();
+    const w = Math.ceil(Math.max(rect.width, el.scrollWidth));
+    /* hitung tinggi penuh termasuk konten yang ter-scroll */
+    let extra = 0;
+    el.querySelectorAll(".tl-scroll, .tbl-scroll").forEach(s => {
+      extra += Math.max(0, s.scrollHeight - s.clientHeight);
+    });
+    const h = Math.ceil(rect.height + extra);
+
+    const clone = el.cloneNode(true);
+    inlineStyles(el, clone);
+    /* lepas clip scroll di clone */
+    clone.querySelectorAll(".tl-scroll, .tbl-scroll").forEach(s => {
+      s.style.maxHeight = "none"; s.style.overflow = "visible";
+    });
+    /* ganti canvas chart dengan gambar base64 */
+    const srcC = el.querySelectorAll("canvas"), dstC = clone.querySelectorAll("canvas");
+    srcC.forEach((cv, i) => {
+      if(!dstC[i]) return;
+      const chart = Chart.getChart(cv);
+      const img = document.createElement("img");
+      img.src = chart ? chart.toBase64Image("image/png", 1) : cv.toDataURL("image/png");
+      img.style.cssText = `display:block;width:${cv.clientWidth}px;height:${cv.clientHeight}px;`;
+      dstC[i].replaceWith(img);
+    });
+    clone.querySelectorAll(".exp-btn").forEach(b => b.remove());
+
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`
+      + `<foreignObject width="${w}" height="${h}">`
+      + `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px">${xml}</div>`
+      + `</foreignObject></svg>`;
+    const img = new Image();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    await img.decode();
+
+    const scale = 2; /* 2x biar tajem di PowerPoint */
+    const c = document.createElement("canvas");
+    c.width = w * scale; c.height = h * scale;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.drawImage(img, 0, 0, w, h);
+    await copyCanvas(c, btn);
+  }catch(e){
+    console.error("export error", e);
+    toast("❌ Gagal export: " + e.message, 4000);
+  }
+}
+document.querySelectorAll(".exp-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const el = document.getElementById(btn.dataset.target);
+    if(el) exportSection(el, btn);
+  });
+});
 
 /* ======================= RENDER ======================= */
 function render(){
