@@ -10,7 +10,7 @@ Dashboard laporan **visibility compliance** (Planogram · OSA · POSM) per regio
 - **Issue Breakdown** — donut: Stores OOS, Incorrect POSM, Incorrect NPD Zone, Incorrect Variant/Product Arrangement, No Foto/Foto Blur
 - **Compliance Trend** — line chart Overall · Planogram · OSA · POSM per bulan (otomatis nambah saat bulan baru ditambahkan)
 - **Region Performance Scorecard** — tabel per region + Grand Total + kolom Δ vs bulan lalu
-- **TL Performance Overview** — ranking semua TL (stores, submission, planogram, POSM take-out, overall, Δ vs bulan lalu) + strip Best TL 🏆 / Bottom TL ⚠️ / Average / Total Stores; baris terbaik (hijau) & terbawah (merah)
+- **TL Performance Overview** — ranking semua TL berdasarkan planogram compliance (stores, submission rate, planogram, TRUE/FALSE, Δ vs bulan lalu); strip **Top 3 TL 🏆** & **Bottom 3 TL ⚠️**; 3 baris terbaik (hijau) & 3 terbawah (merah) ter-highlight
 - **Planogram vs OSA vs POSM by Region** — grouped bar
 - **Regions Needing Attention** — 5 region terbawah + main issue
 - **Key Insight & Next Action** — dihasilkan otomatis dari data (termasuk saran coaching untuk bottom TL)
