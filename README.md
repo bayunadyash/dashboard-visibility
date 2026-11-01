@@ -14,6 +14,7 @@ Dashboard laporan **visibility compliance** (Planogram · OSA · POSM) per regio
 - **Planogram vs OSA vs POSM by Region** — grouped bar
 - **Regions Needing Attention** — 5 region terbawah + main issue
 - **Key Insight & Next Action** — dihasilkan otomatis dari data (termasuk saran coaching untuk bottom TL)
+- **Tombol 📋 Copy di tiap section** — klik untuk menyalin section (KPI, chart, tabel, insight) sebagai gambar PNG 2× ke clipboard → langsung **Ctrl/Cmd+V** ke PowerPoint/Word/Slack, tanpa screenshot. Jika clipboard diblokir browser, PNG otomatis di-download.
 
 ## 🗂 Struktur Data
 
