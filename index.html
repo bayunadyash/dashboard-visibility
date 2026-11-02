@@ -179,7 +179,7 @@
 </style>
 </head>
 <body>
-<div class="dash">
+  <div class="dash">
   <!-- ================= HEADER ================= -->
   <header>
     <div class="brand">SKINTIFIC</div>
@@ -370,6 +370,29 @@
     </div>
   </section>
 
+  <!-- ================= PLANOG RAM TRUE/FALSE TREND ================= -->
+  <section class="grid">
+    <div class="card" id="cardPFTrend">
+      <div class="card-head">
+        <div class="card-ic ic-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+        </div>
+        <h2>Planogram TRUE / FALSE Trend per Region (Visibility)</h2>
+        <div class="right legend-mini">
+          <span><i class="dot" style="background:var(--green)"></i> TRUE = sesuai planogram</span>
+          <span><i class="dot" style="background:var(--red)"></i> FALSE = perlu perbaikan</span>
+          <button class="exp-btn" data-target="cardPFTrend">📋 Copy</button>
+        </div>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead id="pfHead"></thead>
+          <tbody id="pfBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= INSIGHTS ================= -->
   <div class="sec-head">
     <h2>Ringkasan</h2>
@@ -401,12 +424,6 @@
 <div id="toast"></div>
 
 <script>
-/* ================================================================
-   DATA — update tiap bulan: tambah blok baru di RAW & TL_RAW.
-   RAW   = data per region (sheets Planogram/OSA/POSM regional)
-   TL_RAW = data per Team Leader (sheets Visibility per TL)
-   ================================================================ */
-
 /* row helpers: P=planogram, O=OSA, M=POSM, T=TL row */
 const P = (region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad)=>({region,aom,stores,sub,ok,bad,npdZone,prodArr,posmBad});
 const O = (region,alloc,good,oos)=>({region,alloc,good,oos});
@@ -414,218 +431,75 @@ const M = (region,alloc,sub,takeout)=>({region,alloc,sub,takeout});
 const T = (tl,region,aom,stores,sub,ok,bad,npd,variant,posmBad,noFoto,posmSub,takeout)=>
   ({tl,region,aom,stores,sub,ok,bad,npd,variant,posmBad,noFoto,posmSub,takeout});
 
-/* No Foto/Foto Blur per region (dari sheet TL, di-rollup) */
-const NOFOTO = {
-  "2026-09":{"BALI NUSA TENGGARA":1, "SOUTHERN SULAWESI":1},
-  "2026-10":{"BALI NUSA TENGGARA":1},
-};
+/* Data containers — diisi dari JSON via loadData() */
+let RAW = {};
+let TL_RAW = {};
+let NOFOTO = {};
+let PERIODS = [];
 
-const RAW = {
-  "2026-09": {
-    label:"September 2026", short:"Sep",
-    plano:[
-      P("BALI NUSA TENGGARA","CHRISTY ELIKA",103,103,75,28,4,1,22),
-      P("CENTRAL JAVA","GUMILANG PRAKARSA",86,86,78,8,1,0,7),
-      P("CENTRAL SUMATERA 1","YOSEF KRISTIAN",31,31,13,18,0,1,17),
-      P("CENTRAL SUMATERA 2","BIMO ARYA PUTRA",35,35,35,0,0,0,0),
-      P("EAST JAVA","ALFI FAUZAN IRSYAD",121,121,110,11,2,1,8),
-      P("EAST KALIMANTAN","ANGGI FARISTIN JATRA",38,38,38,0,0,0,0),
-      P("NORTHERN SULAWESI","M NUR ALIM",29,29,25,4,0,1,3),
-      P("NORTHERN SUMATERA","YOSEF KRISTIAN",51,51,30,21,4,1,16),
-      P("PAPUA MALUKU","DWI HARSONO",42,42,21,21,1,1,19),
-      P("SOUTH KALIMANTAN","USWATUN HASANAH",30,30,26,4,2,0,2),
-      P("SOUTHERN SULAWESI","M NUR ALIM",53,53,35,18,5,0,12),
-      P("SOUTHERN SUMATERA","BIMO ARYA PUTRA",43,43,32,11,2,1,8),
-      P("WEST JAVA (SD)","HANA ELDERA (NOM)",88,88,73,15,3,2,10),
-      P("WEST KALIMANTAN","ANGGI FARISTIN JATRA",27,27,18,9,0,0,9),
-    ],
-    osa:[
-      O("BALI NUSA TENGGARA",103,71,32),
-      O("CENTRAL JAVA",86,79,7),
-      O("CENTRAL SUMATERA 1",31,9,22),
-      O("CENTRAL SUMATERA 2",35,22,13),
-      O("EAST JAVA",121,106,15),
-      O("EAST KALIMANTAN",38,29,9),
-      O("NORTHERN SULAWESI",29,17,12),
-      O("NORTHERN SUMATERA",51,37,14),
-      O("PAPUA MALUKU",42,8,34),
-      O("SOUTH KALIMANTAN",30,26,4),
-      O("SOUTHERN SULAWESI",53,27,26),
-      O("SOUTHERN SUMATERA",43,26,16),
-      O("WEST JAVA (SD)",88,17,70),
-      O("WEST KALIMANTAN",27,26,1),
-    ],
-    posm:[
-      M("BALI NUSA TENGGARA",101,94,67),
-      M("CENTRAL JAVA",85,85,73),
-      M("CENTRAL SUMATERA 1",31,27,22),
-      M("CENTRAL SUMATERA 2",35,35,24),
-      M("EAST JAVA",115,117,95),
-      M("EAST KALIMANTAN",38,37,31),
-      M("NORTHERN SULAWESI",28,29,10),
-      M("NORTHERN SUMATERA",47,44,36),
-      M("PAPUA MALUKU",42,41,30),
-      M("SOUTH KALIMANTAN",27,29,23),
-      M("SOUTHERN SULAWESI",50,49,45),
-      M("SOUTHERN SUMATERA",43,40,34),
-      M("WEST JAVA (SD)",86,79,54),
-      M("WEST KALIMANTAN",27,27,23),
-    ],
-  },
-  "2026-10": {
-    label:"October 2026", short:"Oct",
-    plano:[
-      P("BALI NUSA TENGGARA","CHRISTY ELIKA",104,104,96,8,3,0,4),
-      P("CENTRAL JAVA","GUMILANG PRAKARSA",88,88,87,1,0,0,1),
-      P("CENTRAL SUMATERA 1","YOSEF KRISTIAN",31,31,26,5,2,0,3),
-      P("CENTRAL SUMATERA 2","BIMO ARYA PUTRA",31,31,31,0,0,0,0),
-      P("EAST JAVA","ALFI FAUZAN IRSYAD",120,120,120,0,0,0,0),
-      P("EAST KALIMANTAN","ANGGI FARISTIN JATRA",37,37,37,0,0,0,0),
-      P("NORTHERN SULAWESI","M NUR ALIM",34,34,31,3,2,0,1),
-      P("NORTHERN SUMATERA","YOSEF KRISTIAN",47,47,44,3,2,0,1),
-      P("PAPUA MALUKU","DWI HARSONO",38,38,33,5,1,0,4),
-      P("SOUTH KALIMANTAN","USWATUN HASANAH",31,31,29,2,1,0,1),
-      P("SOUTHERN SULAWESI","M NUR ALIM",49,49,45,4,1,0,3),
-      P("SOUTHERN SUMATERA","BIMO ARYA PUTRA",50,50,41,9,5,2,2),
-      P("WEST JAVA (SD)","HANA ELDERA (NOM)",83,83,81,2,2,0,0),
-      P("WEST KALIMANTAN","ANGGI FARISTIN JATRA",28,28,22,6,2,0,4),
-    ],
-    osa:[
-      O("BALI NUSA TENGGARA",104,70,34),
-      O("CENTRAL JAVA",88,80,8),
-      O("CENTRAL SUMATERA 1",31,10,21),
-      O("CENTRAL SUMATERA 2",31,12,19),
-      O("EAST JAVA",120,110,10),
-      O("EAST KALIMANTAN",37,31,6),
-      O("NORTHERN SULAWESI",34,30,4),
-      O("NORTHERN SUMATERA",47,39,8),
-      O("PAPUA MALUKU",38,14,24),
-      O("SOUTH KALIMANTAN",31,30,1),
-      O("SOUTHERN SULAWESI",49,30,19),
-      O("SOUTHERN SUMATERA",50,27,23),
-      O("WEST JAVA (SD)",83,32,51),
-      O("WEST KALIMANTAN",28,28,0),
-    ],
-    posm:[
-      M("BALI NUSA TENGGARA",101,97,84),
-      M("CENTRAL JAVA",86,85,70),
-      M("CENTRAL SUMATERA 1",29,27,26),
-      M("CENTRAL SUMATERA 2",31,31,23),
-      M("EAST JAVA",111,118,105),
-      M("EAST KALIMANTAN",35,35,33),
-      M("NORTHERN SULAWESI",33,33,31),
-      M("NORTHERN SUMATERA",42,40,34),
-      M("PAPUA MALUKU",37,32,36),
-      M("SOUTH KALIMANTAN",25,30,25),
-      M("SOUTHERN SULAWESI",46,47,46),
-      M("SOUTHERN SUMATERA",44,46,41),
-      M("WEST JAVA (SD)",78,75,76),
-      M("WEST KALIMANTAN",28,28,24),
-    ],
-  },
-  /* >>> Tambah bulan berikutnya di sini (contoh "2026-11") <<< */
-};
-const PERIODS = Object.keys(RAW); /* urut sesuai penambahan: terakhir = bulan terbaru */
-/* ============ TL (TEAM LEADER) DATA ============
-   T(tl, region, aom, stores, sub, TRUE, FALSE, npdZone, variantByOrder, posmBad, noFoto, posmSub, takeout)
-   Tervalidasi = grand total laporan:
-   Sep 2026: 777 stores / 609 TRUE / 168 FALSE / npd 24 / var 9 / posm 133 / nofoto 2 / sub 733 / takeout 567
-   Oct 2026: 771 stores / 723 TRUE / 48 FALSE / npd 21 / var 2 / posm 24 / nofoto 1 / sub 724 / takeout 654
-   ================================================ */
-const TL_RAW = {
-  "2026-09": [
-    T("CATUR APRIYONO","BALI NUSA TENGGARA","CHRISTY ELIKA",20,20,20,0,0,0,0,0,20,20),
-    T("DIAN PUSPITA SARI","BALI NUSA TENGGARA","CHRISTY ELIKA",21,21,19,2,0,0,2,0,20,15),
-    T("NI KADEK RISA ARIANI DWIASRI","BALI NUSA TENGGARA","CHRISTY ELIKA",30,30,22,8,3,1,4,0,22,20),
-    T("visy rizky mayasari","BALI NUSA TENGGARA","CHRISTY ELIKA",21,21,11,10,0,0,10,0,21,10),
-    T("YOHANES IWANDI MAHI","BALI NUSA TENGGARA","CHRISTY ELIKA",11,11,3,8,1,0,6,1,11,2),
-    T("ANITA KURNIA WIDYASTUTI","CENTRAL JAVA","GUMILANG PRAKARSA",22,22,21,1,1,0,0,0,22,19),
-    T("ASNIDA FEBRIANI","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
-    T("Dewi nurhaniari","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
-    T("JEFMI HARIANDA","CENTRAL JAVA","GUMILANG PRAKARSA",15,15,15,0,0,0,0,0,15,11),
-    T("MUNJAI","CENTRAL JAVA","GUMILANG PRAKARSA",21,21,14,7,0,0,7,0,20,16),
-    T("RENA FEBRI GUNAWAN","CENTRAL SUMATERA 1","YOSEF KRISTIAN",21,21,3,18,0,1,17,0,21,16),
-    T("Siti Ayu Mardiah","CENTRAL SUMATERA 1","YOSEF KRISTIAN",10,10,10,0,0,0,0,0,6,6),
-    T("WAHYUNI WIJAYANTI","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",21,21,21,0,0,0,0,0,21,18),
-    T("Zahara","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",14,14,14,0,0,0,0,0,14,6),
-    T("Desnyta Dianasari","EAST JAVA","ALFI FAUZAN IRSYAD",16,16,10,6,0,1,5,0,16,11),
-    T("Febty Aryani Purwaningtiyas","EAST JAVA","ALFI FAUZAN IRSYAD",43,43,39,4,1,0,3,0,42,38),
-    T("Moch Ridwan","EAST JAVA","ALFI FAUZAN IRSYAD",20,20,20,0,0,0,0,0,19,20),
-    T("Pitip Patria Susanti","EAST JAVA","ALFI FAUZAN IRSYAD",24,24,24,0,0,0,0,0,23,14),
-    T("VAN DJOEDI","EAST JAVA","ALFI FAUZAN IRSYAD",18,18,17,1,1,0,0,0,17,12),
-    T("Anita Oktavia Renny","EAST KALIMANTAN","ANGGI FARISTIN JATRA",24,24,24,0,0,0,0,0,24,21),
-    T("Lilit Yustinia","EAST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,14,0,0,0,0,0,13,10),
-    T("JERLIN KOLEANGAN","NORTHERN SULAWESI","M NUR ALIM",19,19,13,6,0,1,5,0,19,10),
-    T("Nurfanti","NORTHERN SULAWESI","M NUR ALIM",16,16,16,0,0,0,0,0,16,3),
-    T("DEWI ISMAYANI","NORTHERN SUMATERA","YOSEF KRISTIAN",30,30,13,17,3,1,13,0,26,18),
-    T("FIKRI ANGGARA","NORTHERN SUMATERA","YOSEF KRISTIAN",11,11,7,4,1,0,3,0,10,10),
-    T("SAFRINA","NORTHERN SUMATERA","YOSEF KRISTIAN",10,10,10,0,0,0,0,0,8,8),
-    T("LISA NOVIANTY CHORY","PAPUA MALUKU","DWI HARSONO",21,21,10,11,1,0,10,0,20,16),
-    T("NUR INTAN ZAINAL","PAPUA MALUKU","DWI HARSONO",15,15,7,8,0,1,7,0,15,10),
-    T("FITRIA SAFITRY","SOUTH KALIMANTAN","USWATUN HASANAH",19,19,16,3,2,0,1,0,18,12),
-    T("MULIANA","SOUTH KALIMANTAN","USWATUN HASANAH",11,11,10,1,0,0,1,0,11,11),
-    T("GERALD LINTANG","SOUTHERN SULAWESI","M NUR ALIM",17,17,4,13,3,0,9,1,14,11),
-    T("Marlin","SOUTHERN SULAWESI","M NUR ALIM",15,15,15,0,0,0,0,0,14,15),
-    T("NIKEN GUNAWAN","SOUTHERN SULAWESI","M NUR ALIM",13,13,8,5,2,0,3,0,14,12),
-    T("Vena Bayu Febrianti","SOUTHERN SULAWESI","M NUR ALIM",8,8,8,0,0,0,0,0,7,7),
-    T("AZNI MAGHRIBA SAPUTRI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",7,7,7,0,0,0,0,0,7,7),
-    T("FITRIA SA'ADAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",15,15,12,3,1,0,2,0,14,13),
-    T("KHOIRUNNISA NURJANAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",12,12,7,5,1,1,3,0,12,8),
-    T("NURHAYATI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",9,9,6,3,0,0,3,0,7,6),
-    T("FUJI SEPTIANTI","WEST JAVA (SD)","HANA ELDERA (NOM)",20,20,20,0,0,0,0,0,14,14),
-    T("RIYANTI NURAHENY","WEST JAVA (SD)","HANA ELDERA (NOM)",16,16,16,0,0,0,0,0,16,12),
-    T("SEFUL ARIFIN","WEST JAVA (SD)","HANA ELDERA (NOM)",34,34,19,15,3,2,10,0,33,10),
-    T("Selfi Purwaningsih","WEST JAVA (SD)","HANA ELDERA (NOM)",18,18,18,0,0,0,0,0,16,18),
-    T("Dewi andayani","WEST KALIMANTAN","ANGGI FARISTIN JATRA",13,13,13,0,0,0,0,0,13,13),
-    T("Haja africana","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,5,9,0,0,9,0,14,10),
-  ],
-  "2026-10": [
-    T("CATUR APRIYONO","BALI NUSA TENGGARA","CHRISTY ELIKA",43,43,43,0,0,0,0,0,41,39),
-    T("NI KADEK RISA ARIANI DWIASRI","BALI NUSA TENGGARA","CHRISTY ELIKA",29,29,26,3,1,0,2,0,25,26),
-    T("visy rizky mayasari","BALI NUSA TENGGARA","CHRISTY ELIKA",22,22,19,3,1,0,2,0,22,16),
-    T("YOHANES IWANDI MAHI","BALI NUSA TENGGARA","CHRISTY ELIKA",10,10,8,2,1,0,0,1,9,3),
-    T("ANITA KURNIA WIDYASTUTI","CENTRAL JAVA","GUMILANG PRAKARSA",23,23,23,0,0,0,0,0,23,15),
-    T("ASNIDA FEBRIANI","CENTRAL JAVA","GUMILANG PRAKARSA",14,14,14,0,0,0,0,0,14,14),
-    T("Dewi nurhaniari","CENTRAL JAVA","GUMILANG PRAKARSA",16,16,16,0,0,0,0,0,13,16),
-    T("JEFMI HARIANDA","CENTRAL JAVA","GUMILANG PRAKARSA",16,16,16,0,0,0,0,0,16,11),
-    T("MUNJAI","CENTRAL JAVA","GUMILANG PRAKARSA",19,19,18,1,0,0,1,0,19,14),
-    T("RENA FEBRI GUNAWAN","CENTRAL SUMATERA 1","YOSEF KRISTIAN",21,21,17,4,1,0,3,0,21,16),
-    T("Siti Ayu Mardiah","CENTRAL SUMATERA 1","YOSEF KRISTIAN",10,10,9,1,1,0,0,0,6,10),
-    T("WAHYUNI WIJAYANTI","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",20,20,20,0,0,0,0,0,20,19),
-    T("Zahara","CENTRAL SUMATERA 2","BIMO ARYA PUTRA",11,11,11,0,0,0,0,0,11,4),
-    T("Desnyta Dianasari","EAST JAVA","ALFI FAUZAN IRSYAD",17,17,17,0,0,0,0,0,17,14),
-    T("Febty Aryani Purwaningtiyas","EAST JAVA","ALFI FAUZAN IRSYAD",40,40,40,0,0,0,0,0,39,35),
-    T("Moch Ridwan","EAST JAVA","ALFI FAUZAN IRSYAD",21,21,21,0,0,0,0,0,20,21),
-    T("Pitip Patria Susanti","EAST JAVA","ALFI FAUZAN IRSYAD",24,24,24,0,0,0,0,0,24,16),
-    T("VAN DJOEDI","EAST JAVA","ALFI FAUZAN IRSYAD",18,18,18,0,0,0,0,0,18,19),
-    T("Anita Oktavia Renny","EAST KALIMANTAN","ANGGI FARISTIN JATRA",21,21,21,0,0,0,0,0,21,20),
-    T("Lilit Yustinia","EAST KALIMANTAN","ANGGI FARISTIN JATRA",16,16,16,0,0,0,0,0,14,13),
-    T("JERLIN KOLEANGAN","NORTHERN SULAWESI","M NUR ALIM",19,19,17,2,1,0,1,0,18,16),
-    T("Nurfanti","NORTHERN SULAWESI","M NUR ALIM",15,15,14,1,1,0,0,0,15,15),
-    T("DEWI ISMAYANI","NORTHERN SUMATERA","YOSEF KRISTIAN",23,23,22,1,0,0,1,0,18,16),
-    T("FIKRI ANGGARA","NORTHERN SUMATERA","YOSEF KRISTIAN",11,11,9,2,2,0,0,0,9,9),
-    T("SAFRINA","NORTHERN SUMATERA","YOSEF KRISTIAN",13,13,13,0,0,0,0,0,13,9),
-    T("LISA NOVIANTY CHORY","PAPUA MALUKU","DWI HARSONO",23,23,18,5,1,0,4,0,18,22),
-    T("NUR INTAN ZAINAL","PAPUA MALUKU","DWI HARSONO",15,15,15,0,0,0,0,0,14,14),
-    T("FITRIA SAFITRY","SOUTH KALIMANTAN","USWATUN HASANAH",18,18,16,2,1,0,1,0,17,13),
-    T("MULIANA","SOUTH KALIMANTAN","USWATUN HASANAH",13,13,13,0,0,0,0,0,13,12),
-    T("GERALD LINTANG","SOUTHERN SULAWESI","M NUR ALIM",12,12,10,2,0,0,2,0,11,11),
-    T("Marlin","SOUTHERN SULAWESI","M NUR ALIM",15,15,15,0,0,0,0,0,15,15),
-    T("NIKEN GUNAWAN","SOUTHERN SULAWESI","M NUR ALIM",15,15,13,2,1,0,1,0,15,13),
-    T("Vena Bayu Febrianti","SOUTHERN SULAWESI","M NUR ALIM",7,7,7,0,0,0,0,0,6,7),
-    T("AZNI MAGHRIBA SAPUTRI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",7,7,7,0,0,0,0,0,5,3),
-    T("FITRIA SA'ADAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",17,17,15,2,1,0,1,0,16,17),
-    T("KHOIRUNNISA NURJANAH","SOUTHERN SUMATERA","BIMO ARYA PUTRA",15,15,10,5,2,2,1,0,15,15),
-    T("NURHAYATI","SOUTHERN SUMATERA","BIMO ARYA PUTRA",11,11,9,2,2,0,0,0,10,6),
-    T("FUJI SEPTIANTI","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",17,17,17,0,0,0,0,0,14,15),
-    T("RIYANTI NURAHENY","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",14,14,14,0,0,0,0,0,14,14),
-    T("SEFUL ARIFIN","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",34,34,32,2,2,0,0,0,29,29),
-    T("Selfi Purwaningsih","WEST JAVA (SD)","ALEXANDRA DENISE LUKITA",18,18,18,0,0,0,0,0,18,18),
-    T("Dewi andayani","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,14,0,0,0,0,0,14,11),
-    T("NOVITA DAMAYANTI","WEST KALIMANTAN","ANGGI FARISTIN JATRA",14,14,8,6,2,0,4,0,14,13),
-  ],
-  /* >>> Tambah TL bulan berikutnya di sini <<< */
-};
+/* Data loading — fetch JSON files otomatis saat halaman dimuat */
+async function loadData(){
+  try{
+    const [periods, plano, osa, posm, tl, nofoto] = await Promise.all([
+      fetch("data/periods.json").then(r=>r.json()),
+      fetch("data/plano.json").then(r=>r.json()),
+      fetch("data/osa.json").then(r=>r.json()),
+      fetch("data/posm.json").then(r=>r.json()),
+      fetch("data/tl.json").then(r=>r.json()),
+      fetch("data/nofoto.json").then(r=>r.json()),
+    ]);
+
+    PERIODS = periods.map(p=>p.period);
+
+    RAW = {};
+    periods.forEach(p => {
+      RAW[p.period] = {
+        label: p.label,
+        short: p.short,
+        plano: plano.filter(r=>r.period===p.period),
+        osa: osa.filter(r=>r.period===p.period),
+        posm: posm.filter(r=>r.period===p.period),
+      };
+    });
+
+    TL_RAW = {};
+    periods.forEach(p => {
+      TL_RAW[p.period] = tl.filter(r=>r.period===p.period);
+    });
+
+    NOFOTO = {};
+    periods.forEach(p => {
+      NOFOTO[p.period] = {};
+      nofoto.filter(r=>r.period===p.period).forEach(r => {
+        NOFOTO[p.period][r.region] = r.count;
+      });
+    });
+
+    init();
+  } catch(err){
+    document.body.innerHTML = `
+      <div style="padding:40px; font-family:sans-serif; color:#e0574f; text-align:center;">
+        <h2>Gagal memuat data</h2>
+        <p>${err.message}</p>
+        <p>Pastikan semua file JSON ada di folder <code>data/</code> dan server berjalan.</p>
+      </div>`;
+  }
+}
+
+function init(){
+  /* PERIODS terisi setelah JSON dimuat — set periode default di sini */
+  if(!state.period || !RAW[state.period]) state.period = PERIODS[PERIODS.length-1];
+  refreshPeriodOptions();
+  refreshRegionOptions();
+  refreshAomOptions();
+  refreshTlOptions();
+  applyTlPillState();
+  refreshRegionOptions(); /* re-sync dgn state.region dari applyTlPillState */
+  render();
+}
+
+loadData();
+
 /* ======================= HELPERS ======================= */
 const $ = id => document.getElementById(id);
 const pct = v => (v===null || v===undefined) ? "—" : Math.round(v) + "%";
@@ -1189,6 +1063,85 @@ function renderTLOverview(){
   }
 }
 
+/* ======================= PLANOG RAM TRUE/FALSE TREND ======================= */
+function renderPFTrend(){
+  const periods = PERIODS;
+  const latest = periods[periods.length-1];
+  const pk = prevKey();
+
+  /* row per region per periode (pakai filter aktif) */
+  const rowsByPeriod = {};
+  periods.forEach(k => { rowsByPeriod[k] = {}; });
+  periods.forEach(k => {
+    toAreaRows(visibleRows(k)).forEach(x => {
+      rowsByPeriod[k][x.area] = {ok:x.a.pOk, bad:x.a.pBad, stores:x.a.pStores, aoms:x.aoms};
+    });
+  });
+
+  const areas = Object.keys(rowsByPeriod[latest]);
+  /* urut: FALSE terbanyak dulu (worst first) */
+  areas.sort((a,b) => {
+    const A = rowsByPeriod[latest][a], B = rowsByPeriod[latest][b];
+    return (B.bad - A.bad) || ((B.stores?B.bad/B.stores:0) - (A.stores?A.bad/A.stores:0));
+  });
+
+  /* header: 2 baris (periode menampung 2 sub-kolom) */
+  let h1 = `<tr><th class="l" rowspan="2">Region</th><th class="l" rowspan="2">AOM</th>`;
+  periods.forEach(k => { h1 += `<th colspan="2">${RAW[k].short} ${RAW[k].label.split(" ")[1]||""}</th>`; });
+  if(pk) h1 += `<th rowspan="2">Δ FALSE<br>vs ${RAW[pk].short}</th>`;
+  h1 += `</tr><tr>`;
+  periods.forEach(() => { h1 += `<th>TRUE</th><th>FALSE</th>`; });
+  h1 += `</tr>`;
+  $("pfHead").innerHTML = h1;
+
+  /* body */
+  let html = areas.map(area => {
+    const cur = rowsByPeriod[latest][area];
+    let cells = "";
+    periods.forEach(k => {
+      const r = rowsByPeriod[k][area];
+      if(!r){ cells += `<td class="muted-na">—</td><td class="muted-na">—</td>`; return; }
+      const badCls = r.bad === 0 ? "c-good" : (r.stores && r.bad / r.stores > 0.15 ? "c-bad" : "c-warn");
+      cells += `<td><span class="chip ${statusCls(r.stores?r.ok/r.stores*100:null)}">${r.ok}</span></td>`;
+      cells += `<td><span class="chip ${badCls}">${r.bad}</span></td>`;
+    });
+    let delta = "";
+    if(pk){
+      const prev = rowsByPeriod[pk][area];
+      const d = (prev !== undefined) ? (cur.bad - prev.bad) : null;
+      delta = d === null
+        ? `<span class="delta flat">new</span>`
+        : `<span class="delta ${d < 0 ? "up" : d > 0 ? "down" : "flat"}">${d < 0 ? "▼" : d > 0 ? "▲" : "●"} ${d > 0 ? "+" : ""}${d}</span>`;
+    }
+    return `<tr>
+      <td class="l">${titleCase(area)}</td>
+      <td class="l aom">${cur.aoms.map(t=>titleCase(t)).join(" · ")}</td>
+      ${cells}
+      ${delta ? `<td>${delta}</td>` : ""}
+    </tr>`;
+  }).join("");
+
+  /* grand total */
+  const totCells = periods.map(k => {
+    const vals = Object.values(rowsByPeriod[k]);
+    if(!vals.length) return `<td class="muted-na">—</td><td class="muted-na">—</td>`;
+    const ok = vals.reduce((s,v)=>s+v.ok,0), bad = vals.reduce((s,v)=>s+v.bad,0);
+    const st = vals.reduce((s,v)=>s+v.stores,0);
+    return `<td>${ok}</td><td>${bad}</td>`;
+  }).join("");
+  let totDelta = "";
+  if(pk){
+    const nowTot = Object.values(rowsByPeriod[latest]).reduce((s,v)=>s+v.bad,0);
+    const prevTot = Object.values(rowsByPeriod[pk]).reduce((s,v)=>s+v.bad,0);
+    const d = nowTot - prevTot;
+    totDelta = `<td><span class="delta ${d<0?"up":d>0?"down":"flat"}">${d<0?"▼":d>0?"▲":"●"} ${d>0?"+":""}${d}</span></td>`;
+  }
+  html += `<tr class="total-row"><td class="l">Grand Total</td><td class="l"></td>${totCells}${totDelta}</tr>`;
+
+  $("pfBody").innerHTML = areas.length ? html
+    : `<tr><td colspan="4" style="text-align:center; color:var(--muted);">No data for this filter</td></tr>`;
+}
+
 /* ======================= INSIGHTS ======================= */
 function renderInsights(){
   const rows = visibleRows();
@@ -1342,6 +1295,7 @@ function render(){
   renderScorecard();
   renderTLOverview();
   renderAttention();
+  renderPFTrend();
   renderInsights();
   const a = aggregate(visibleRows());
   $("footNote").textContent =
@@ -1351,13 +1305,7 @@ function render(){
 }
 
 /* ======================= INIT ======================= */
-refreshPeriodOptions();
-refreshRegionOptions();
-refreshAomOptions();
-refreshTlOptions();
-applyTlPillState();
-refreshRegionOptions(); /* re-sync dgn state.region dari applyTlPillState */
-render();
+/* Dipanggil otomatis dari loadData() setelah JSON selesai di-fetch */
 
 
 
