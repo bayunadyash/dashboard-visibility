@@ -358,36 +358,8 @@
       </div>
       <div class="tbl-scroll">
         <table>
-          <thead>
-            <tr>
-              <th class="l">Region</th><th class="l">AOM</th><th class="l">Main Issue</th>
-              <th>OOS</th><th>Planogram FALSE</th><th>Overall</th>
-            </tr>
-          </thead>
+          <thead id="attnHead"></thead>
           <tbody id="attentionBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ================= PLANOG RAM TRUE/FALSE TREND ================= -->
-  <section class="grid">
-    <div class="card" id="cardPFTrend">
-      <div class="card-head">
-        <div class="card-ic ic-blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 12l2.5 2.5L16 9"/></svg>
-        </div>
-        <h2>Planogram TRUE / FALSE Trend per Region (Visibility)</h2>
-        <div class="right legend-mini">
-          <span><i class="dot" style="background:var(--green)"></i> TRUE = sesuai planogram</span>
-          <span><i class="dot" style="background:var(--red)"></i> FALSE = perlu perbaikan</span>
-          <button class="exp-btn" data-target="cardPFTrend">📋 Copy</button>
-        </div>
-      </div>
-      <div class="tbl-scroll">
-        <table>
-          <thead id="pfHead"></thead>
-          <tbody id="pfBody"></tbody>
         </table>
       </div>
     </div>
@@ -958,8 +930,17 @@ function renderScorecard(){
 }
 
 function renderAttention(){
-  const rows = visibleRows();
-  const areas = toAreaRows(rows);
+  const periods = PERIODS;
+  const base = state.period; /* periode aktif dipakai untuk ranking & issue */
+  const pk = prevKey();
+
+  /* data area per periode (ikut filter aktif) */
+  const byPeriod = {};
+  periods.forEach(k => {
+    byPeriod[k] = {};
+    toAreaRows(visibleRows(k)).forEach(x => { byPeriod[k][x.area] = x; });
+  });
+
   const mainIssue = x => {
     const cands = [
       ...(x.a.hasOSA ? [{nm:`OOS ${Math.round(x.a.oosRate)}%`, v:x.a.oosRate}] : []),
@@ -968,16 +949,50 @@ function renderAttention(){
     ].sort((a,b)=>b.v-a.v);
     return cands[0].nm;
   };
-  const bottom = [...areas].sort((a,b)=>a.a.overall-b.a.overall).slice(0,5);
-  $("attentionBody").innerHTML = bottom.map(x => `
+
+  /* header 2 baris: Region/AOM/Main Issue/Overall (rowspan) + TRUE/FALSE per periode */
+  let h1 = `<tr>
+    <th class="l" rowspan="2">Region</th><th class="l" rowspan="2">AOM</th><th class="l" rowspan="2">Main Issue</th>`;
+  periods.forEach(k => { h1 += `<th colspan="2">${RAW[k].short} ${RAW[k].label.split(" ")[1]||""}</th>`; });
+  if(pk) h1 += `<th rowspan="2">Δ FALSE<br>vs ${RAW[pk].short}</th>`;
+  h1 += `<th rowspan="2">Overall</th></tr><tr>`;
+  periods.forEach(() => { h1 += `<th>TRUE</th><th>FALSE</th>`; });
+  h1 += `</tr>`;
+  $("attnHead").innerHTML = h1;
+
+  /* 5 area terbawah periode aktif */
+  const bottom = [...(byPeriod[base] ? Object.values(byPeriod[base]) : [])]
+    .sort((a,b) => a.a.overall - b.a.overall).slice(0,5);
+
+  $("attentionBody").innerHTML = bottom.map(x => {
+    const area = x.area;
+    let cells = "";
+    periods.forEach(k => {
+      const r = byPeriod[k][area];
+      if(!r){ cells += `<td class="muted-na">—</td><td class="muted-na">—</td>`; return; }
+      const bad = r.a.pBad, ok = r.a.pOk, st = r.a.pStores;
+      const badCls = bad === 0 ? "c-good" : (st && bad/st > 0.15 ? "c-bad" : "c-warn");
+      cells += `<td><span class="chip ${statusCls(st?ok/st*100:null)}">${ok}</span></td>`;
+      cells += `<td><span class="chip ${badCls}">${bad}</span></td>`;
+    });
+    let delta = "";
+    if(pk){
+      const cur = byPeriod[base][area], prev = byPeriod[pk] && byPeriod[pk][area];
+      const d = (cur && prev) ? (cur.a.pBad - prev.a.pBad) : null;
+      delta = d === null
+        ? `<span class="delta flat">new</span>`
+        : `<span class="delta ${d<0?"up":d>0?"down":"flat"}">${d<0?"▼":d>0?"▲":"●"} ${d>0?"+":""}${d}</span>`;
+    }
+    return `
     <tr>
-      <td class="l">${state.tl!=="ALL" ? titleCase(x.rows[0].tl) : titleCase(x.area)}</td>
+      <td class="l">${state.tl!=="ALL" ? titleCase(x.rows[0].tl) : titleCase(area)}</td>
       <td class="l aom">${x.aoms.map(t=>titleCase(t)).join(" · ")}</td>
       <td class="l" style="font-weight:600; color:#b23a32;">${mainIssue(x)}</td>
-      <td>${x.a.hasOSA ? `<span class="chip ${statusCls(100-x.a.oosRate)}">${x.a.oos}</span>` : `<span class="muted-na">—</span>`}</td>
-      <td><span class="chip ${statusCls(100-(x.a.badRate||0))}">${x.a.pBad}</span></td>
+      ${cells}
+      ${delta ? `<td>${delta}</td>` : ""}
       <td><span class="chip ${statusCls(x.a.overall)}">${pct(x.a.overall)}</span></td>
-    </tr>`).join("") || `<tr><td colspan="6" style="text-align:center; color:var(--muted);">No data</td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td colspan="5" style="text-align:center; color:var(--muted);">No data</td></tr>`;
 }
 /* ======================= TL PERFORMANCE OVERVIEW ======================= */
 function tlMetrics(r){
@@ -1061,85 +1076,6 @@ function renderTLOverview(){
         <td></td>
       </tr>`);
   }
-}
-
-/* ======================= PLANOG RAM TRUE/FALSE TREND ======================= */
-function renderPFTrend(){
-  const periods = PERIODS;
-  const latest = periods[periods.length-1];
-  const pk = prevKey();
-
-  /* row per region per periode (pakai filter aktif) */
-  const rowsByPeriod = {};
-  periods.forEach(k => { rowsByPeriod[k] = {}; });
-  periods.forEach(k => {
-    toAreaRows(visibleRows(k)).forEach(x => {
-      rowsByPeriod[k][x.area] = {ok:x.a.pOk, bad:x.a.pBad, stores:x.a.pStores, aoms:x.aoms};
-    });
-  });
-
-  const areas = Object.keys(rowsByPeriod[latest]);
-  /* urut: FALSE terbanyak dulu (worst first) */
-  areas.sort((a,b) => {
-    const A = rowsByPeriod[latest][a], B = rowsByPeriod[latest][b];
-    return (B.bad - A.bad) || ((B.stores?B.bad/B.stores:0) - (A.stores?A.bad/A.stores:0));
-  });
-
-  /* header: 2 baris (periode menampung 2 sub-kolom) */
-  let h1 = `<tr><th class="l" rowspan="2">Region</th><th class="l" rowspan="2">AOM</th>`;
-  periods.forEach(k => { h1 += `<th colspan="2">${RAW[k].short} ${RAW[k].label.split(" ")[1]||""}</th>`; });
-  if(pk) h1 += `<th rowspan="2">Δ FALSE<br>vs ${RAW[pk].short}</th>`;
-  h1 += `</tr><tr>`;
-  periods.forEach(() => { h1 += `<th>TRUE</th><th>FALSE</th>`; });
-  h1 += `</tr>`;
-  $("pfHead").innerHTML = h1;
-
-  /* body */
-  let html = areas.map(area => {
-    const cur = rowsByPeriod[latest][area];
-    let cells = "";
-    periods.forEach(k => {
-      const r = rowsByPeriod[k][area];
-      if(!r){ cells += `<td class="muted-na">—</td><td class="muted-na">—</td>`; return; }
-      const badCls = r.bad === 0 ? "c-good" : (r.stores && r.bad / r.stores > 0.15 ? "c-bad" : "c-warn");
-      cells += `<td><span class="chip ${statusCls(r.stores?r.ok/r.stores*100:null)}">${r.ok}</span></td>`;
-      cells += `<td><span class="chip ${badCls}">${r.bad}</span></td>`;
-    });
-    let delta = "";
-    if(pk){
-      const prev = rowsByPeriod[pk][area];
-      const d = (prev !== undefined) ? (cur.bad - prev.bad) : null;
-      delta = d === null
-        ? `<span class="delta flat">new</span>`
-        : `<span class="delta ${d < 0 ? "up" : d > 0 ? "down" : "flat"}">${d < 0 ? "▼" : d > 0 ? "▲" : "●"} ${d > 0 ? "+" : ""}${d}</span>`;
-    }
-    return `<tr>
-      <td class="l">${titleCase(area)}</td>
-      <td class="l aom">${cur.aoms.map(t=>titleCase(t)).join(" · ")}</td>
-      ${cells}
-      ${delta ? `<td>${delta}</td>` : ""}
-    </tr>`;
-  }).join("");
-
-  /* grand total */
-  const totCells = periods.map(k => {
-    const vals = Object.values(rowsByPeriod[k]);
-    if(!vals.length) return `<td class="muted-na">—</td><td class="muted-na">—</td>`;
-    const ok = vals.reduce((s,v)=>s+v.ok,0), bad = vals.reduce((s,v)=>s+v.bad,0);
-    const st = vals.reduce((s,v)=>s+v.stores,0);
-    return `<td>${ok}</td><td>${bad}</td>`;
-  }).join("");
-  let totDelta = "";
-  if(pk){
-    const nowTot = Object.values(rowsByPeriod[latest]).reduce((s,v)=>s+v.bad,0);
-    const prevTot = Object.values(rowsByPeriod[pk]).reduce((s,v)=>s+v.bad,0);
-    const d = nowTot - prevTot;
-    totDelta = `<td><span class="delta ${d<0?"up":d>0?"down":"flat"}">${d<0?"▼":d>0?"▲":"●"} ${d>0?"+":""}${d}</span></td>`;
-  }
-  html += `<tr class="total-row"><td class="l">Grand Total</td><td class="l"></td>${totCells}${totDelta}</tr>`;
-
-  $("pfBody").innerHTML = areas.length ? html
-    : `<tr><td colspan="4" style="text-align:center; color:var(--muted);">No data for this filter</td></tr>`;
 }
 
 /* ======================= INSIGHTS ======================= */
@@ -1295,7 +1231,6 @@ function render(){
   renderScorecard();
   renderTLOverview();
   renderAttention();
-  renderPFTrend();
   renderInsights();
   const a = aggregate(visibleRows());
   $("footNote").textContent =
